@@ -1,0 +1,35 @@
+https://docs.secureauth.com/ciam/en/proof-key-of-code-exchange--pkce-.html
+
+
+Client											Server
+------------------------------------			------------------------------------
+Generate: CODE_VERIFIER				
+CODE_CHALLENGE = SHA256(CODE_VERIFIER)
+												
+response_type (code)					--->
+REDIRECT_URI							--->
+CLIENT_ID								--->
+CODE_CHALLENGE 							--->
+CODE_CHALLENGE_METHOD					--->	
+
+												if user validates and accepts
+													Generate: AUTHORIZATION_CODE
+
+										<---	AUTHORIZATION_CODE
+														
+AUTHORIZATION_CODE						--->
+CODE_VERIFIER							--->
+
+
+												if(SHA256(CODE_VERIFIER) == CODE_CHALLENGE)
+													Generate ACCESS_TOKEN
+													Generate REFRESH_TOKEN
+
+										<---	ACCESS_TOKEN
+										<---	REFRESH_TOKEN
+
+ACCESS_TOKEN							--->	
+
+												if ACCESS_TOKEN match
+
+										<---	DATA

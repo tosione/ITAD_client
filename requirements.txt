@@ -1,0 +1,5 @@
+#https://pip.pypa.io/en/latest/reference/requirements-file-format/#requirements-file-format
+
+requests_oauthlib
+print_color
+
