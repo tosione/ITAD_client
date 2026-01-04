@@ -5,6 +5,7 @@
 # Date: 2026-01-03
 
 import requests_oauthlib
+import requests
 import webbrowser
 import json
 import os
@@ -13,8 +14,24 @@ from print_color import print as printc
 import private_data
 
 
-# https://docs.isthereanydeal.com/
-# https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html
+"""
+References:
+
+ITAD API:
+https://docs.isthereanydeal.com/
+
+OAuth2:
+https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html
+https://docs.secureauth.com/ciam/en/proof-key-of-code-exchange--pkce-.html
+https://bytebytego.com/guides/oauth-2-explained-with -siple-terms/
+https://docs.authlib.org/en/latest/client/oauth2.html
+
+HTML:
+https://www.w3schools.com/tags/ref_httpmethods.asp
+
+JSON:
+https://www.json.org/json-en.html
+"""
 
 
 # Application data
@@ -38,23 +55,32 @@ def get_tokens(OASes):
     else:
         obtain_new_tokens_from_ITAD(OASes)
         save_tokens_to_file(OASes)
+        print(f"Created new tokens to file ({TOKEN_FILE})")
 
 
 def load_tokens_from_file(OASes):
-    try:
-        with open(TOKEN_FILE, "r") as f:
-            OASes.token = json.load(f)
-    except Exception as e:
-        print("Error loading tokens:", e)
-        OASes.token = None
+    OASes.token = load_json(TOKEN_FILE)
 
 
 def save_tokens_to_file(OAses):
+    save_json(TOKEN_FILE, OAses.token)
+
+
+def save_json(filename, data):
     try:
-        with open(TOKEN_FILE, "w") as f:
-            json.dump(OAses.token, f, indent=4)
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=4, check_circular=True)
     except Exception as e:
-        print("Error saving tokens:", e)
+        print("Error saving JSON file:", e)
+
+
+def load_json(filename):
+    try:
+        with open(filename, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print("Error loading JSON file:", e)
+        return None
 
 
 def obtain_new_tokens_from_ITAD(OASes):
@@ -86,14 +112,30 @@ def is_OAuth_ok(OASes):
     return OASes.get(BASE_URL + "user/info/v2").status_code == 200
 
 
-def get_data(OASes, endpoint):
-    # Get data from endpoint
-    return OASes.get(BASE_URL + endpoint).content
+def get_data(OASes, endpoint, params):
+    URL = BASE_URL + endpoint
+    headers = {"Authorization": f"Bearer {OASes.token['access_token']}",
+               "api_key": API_KEY}
+    return requests.get(URL, headers=headers, params=params).json()
 
 
-def get_data_text(OASes, endpoint):
-    # Get data from endpoint as text
-    return OASes.get(BASE_URL + endpoint).text
+# def put_data(OASes, endpoint, data):
+#     URL = BASE_URL + endpoint
+#     headers = {
+#         "Authorization": f"Bearer {OASes.token['access_token']}", "api_key": API_KEY}
+#     requests.put(URL, headers=headers, json=data)
+
+
+def delete_data(OASes, endpoint, data):
+    ...
+
+
+def post_data(OASes, endpoint, data):
+    ...
+
+
+def patch_data(OASes, endpoint, data):
+    ...
 
 
 if __name__ == "__main__":
@@ -110,10 +152,20 @@ if __name__ == "__main__":
     # Get tokens
     get_tokens(OASes)
 
+    # Test OAuth
     if is_OAuth_ok(OASes):
         printc("OAuth is working", color='green')
     else:
         printc("OAuth is not working", color='red')
 
-    data = get_data(OASes, "user/info/v2")
-    printc(data, color='purple')
+    # Handle real data here
+    data = get_data(OASes, "user/notes/v1", None)
+    save_json("user_notes.json", data)
+    printc("Saved user_notes.json", color='cyan')
+
+    gid = {"id": "018d937f-11e6-715a-a82c-205cfda90ddd"}
+    data = get_data(OASes, "games/info/v2", gid)
+    save_json("game_info.json", data)
+    printc("Saved game_info.json", color='cyan')
+
+# put_data(OASes, "user/notes/v1", {"example_note": "This is a test note."})
