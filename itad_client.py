@@ -48,7 +48,13 @@ BASE_URL = 'https://api.isthereanydeal.com/'
 TOKEN_FILE = 'itad_tokens.json'
 
 
-def get_tokens(OASes):
+def get_oauth_access_token():
+    # Create an OAuth2 Session
+    OASes = requests_oauthlib.OAuth2Session(client_id=CLIENT_ID,
+                                            redirect_uri=REDIRECT_URI,
+                                            scope=SCOPE,
+                                            pkce='S256')
+
     if os.path.exists(TOKEN_FILE):
         OASes.token = load_json(TOKEN_FILE)
         OASes.refresh_token(TOKEN_URL, auth=(CLIENT_ID, CLIENT_SECRET))
@@ -57,7 +63,10 @@ def get_tokens(OASes):
         obtain_new_tokens_from_ITAD(OASes)
         save_json(TOKEN_FILE, OASes.token)
         print(f'Created new tokens to file ({TOKEN_FILE})')
-    return test_OASes(OASes)
+    if test_OASes(OASes):
+        return OASes.token['access_token']
+    else:
+        return None
 
 
 def save_json(filename, data):
@@ -106,61 +115,61 @@ def test_OASes(OASes):
     return ok
 
 
-def get_data(OASes, security, endpoint, params, data):
+def get_data(security, endpoint, params, data):
     URL = BASE_URL + endpoint
     headers = {'Content-Type': 'application/json'}
     if security == 'key':
         params['key'] = API_KEY
     elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + OASes.token['access_token']
+        headers['Authorization'] = 'Bearer ' + access_token
     response = requests.get(URL, headers=headers, params=params, data=data)
     return response.status_code, response.json()
 
 
-def put_data(OASes, security, endpoint, params, data):
+def put_data(security, endpoint, params, data):
     URL = BASE_URL + endpoint
     headers = {'Content-Type': 'application/json'}
     params = {}
     if security == 'key':
         params['key'] = API_KEY
     elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + OASes.token['access_token']
+        headers['Authorization'] = 'Bearer ' + access_token
     response = requests.put(URL, headers=headers, params=params, json=data)
     return response.status_code
 
 
-def delete_data(OASes, security, endpoint, params, data):
+def delete_data(security, endpoint, params, data):
     URL = BASE_URL + endpoint
     headers = {'Content-Type': 'application/json'}
     params = {}
     if security == 'key':
         params['key'] = API_KEY
     elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + OASes.token['access_token']
+        headers['Authorization'] = 'Bearer ' + access_token
     response = requests.delete(URL, headers=headers, params=params, json=data)
     return response.status_code
 
 
-def post_data(OASes, security, endpoint, params, data):
+def post_data(security, endpoint, params, data):
     URL = BASE_URL + endpoint
     headers = {'Content-Type': 'application/json'}
     params = {}
     if security == 'key':
         params['key'] = API_KEY
     elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + OASes.token['access_token']
+        headers['Authorization'] = 'Bearer ' + access_token
     response = requests.post(URL, headers=headers, params=params, json=data)
     return response.status_code
 
 
-def patch_data(OASes, security, endpoint, params, data):
+def patch_data(security, endpoint, params, data):
     URL = BASE_URL + endpoint
     headers = {'Content-Type': 'application/json'}
     params = {}
     if security == 'key':
         params['key'] = API_KEY
     elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + OASes.token['access_token']
+        headers['Authorization'] = 'Bearer ' + access_token
     response = requests.patch(URL, headers=headers, params=params, json=data)
     return response.status_code, response.json()
 
@@ -170,60 +179,46 @@ if __name__ == '__main__':
     if os.name == 'nt':
         os.system('cls')
 
-    # Create an OAuth2 Session
-    OASes = requests_oauthlib.OAuth2Session(client_id=CLIENT_ID,
-                                            redirect_uri=REDIRECT_URI,
-                                            scope=SCOPE,
-                                            pkce='S256')
-
-    get_tokens(OASes)
+    access_token = get_oauth_access_token()
 
     # test diferent endpoints, methods and security types
-    res1, data1 = get_data(OASes=OASes,
-                           security='oa2',
+    res1, data1 = get_data(security='oa2',
                            endpoint='collection/groups/v1',
                            params={},
                            data={})
     save_json('data1.json', data1)
     print(f'Result 1: {res1} - Saved data1.json')
 
-    res2, data2 = get_data(OASes=OASes,
-                           security='key',
+    res2, data2 = get_data(security='key',
                            endpoint='games/info/v2',
                            params={'id': '018d937f-11e6-715a-a82c-205cfda90ddd'},
                            data={})
     save_json('data2.json', data2)
     print(f'Result 2: {res2} - Saved data2.json')
 
-    res3 = put_data(OASes=OASes,
-                    security='oa2',
+    res3 = put_data(security='oa2',
                     endpoint='user/notes/v1',
                     params={},
                     data=[{'gid': '018d937f-11e6-715a-a82c-205cfda90ddd',
                            'note': 'This is a test note {now}'}])
     print(f'Result 3: {res3}')
 
-    res4 = delete_data(OASes=OASes,
-                       security='oa2',
+    res4 = delete_data(security='oa2',
                        endpoint='user/notes/v1',
                        params={},
                        data=['018d937f-11e6-715a-a82c-205cfda90ddd'])
     print(f'Result 4: {res4}')
 
-    # res5 = post_data(OASes=OASes,
-    #                  security='oa2',
+    # res5 = post_data(security='oa2',
     #                  endpoint='collection/groups/v1',
     #                  params={},
     #                  data={"title": "New Collection Category",
     #                        "public": False})
     # print(f'Result 5: {res5}')
 
-    res6, data6 = patch_data(OASes=OASes,
-                             security='oa2',
+    res6, data6 = patch_data(security='oa2',
                              endpoint='collection/groups/v1',
                              params={},
                              data=[{'id': 15099, 'title': 'Renamed Collection Category'}])
     save_json('data6.json', data6)
     print(f'Result 6: {res6} - Saved data6.json')
-
-    # x = put_data_custom(OASes)
