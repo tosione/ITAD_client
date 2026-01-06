@@ -115,7 +115,7 @@ def test_OASes(OASes):
     return ok
 
 
-def send_request(security, method, endpoint, params, data):
+def send_request(security, method, endpoint, params={}, headers={}, data={}):
     '''
     Docstring for get_data
 
@@ -127,7 +127,7 @@ def send_request(security, method, endpoint, params, data):
     '''
     # prepare URL and headers
     URL = BASE_URL + endpoint
-    headers = {'Content-Type': 'application/json'}
+    headers['Content-Type'] = 'application/json'
     if security == 'key':
         params['key'] = API_KEY
     elif security == 'oa2':
@@ -158,25 +158,20 @@ if __name__ == '__main__':
     # test diferent endpoints, methods and security types
     res1, data1 = send_request(method='GET',
                                security='oa2',
-                               endpoint='collection/groups/v1',
-                               params={},
-                               data={})
+                               endpoint='collection/groups/v1')
     save_json('data1.json', data1)
     print(f'Result 1: {res1} - Saved data1.json')
 
     res2, data2 = send_request(method='GET',
                                security='key',
                                endpoint='games/info/v2',
-                               params={
-                                   'id': '018d937f-11e6-715a-a82c-205cfda90ddd'},
-                               data={})
+                               params={'id': '018d937f-11e6-715a-a82c-205cfda90ddd'})
     save_json('data2.json', data2)
     print(f'Result 2: {res2} - Saved data2.json')
 
     res3, data3 = send_request(method='PUT',
                                security='oa2',
                                endpoint='user/notes/v1',
-                               params={},
                                data=[{'gid': '018d937f-11e6-715a-a82c-205cfda90ddd',
                                       'note': 'This is a test note {now}'}])
     print(f'Result 3: {res3}')
@@ -184,14 +179,12 @@ if __name__ == '__main__':
     res4, data4 = send_request(method='DELETE',
                                security='oa2',
                                endpoint='user/notes/v1',
-                               params={},
                                data=['018d937f-11e6-715a-a82c-205cfda90ddd'])
     print(f'Result 4: {res4}')
 
     res5, data5 = send_request(method='POST',
                                security='oa2',
                                endpoint='collection/groups/v1',
-                               params={},
                                data={"title": "New Collection Category",
                                      "public": False})
     print(f'Result 5: {res5}')
@@ -199,7 +192,7 @@ if __name__ == '__main__':
     res6, data6 = send_request(method='PATCH',
                                security='oa2',
                                endpoint='collection/groups/v1',
-                               params={},
-                               data=[{'id': 15099, 'title': 'Renamed Collection Category'}])
+                               data=[{'id': 15099,
+                                      'title': 'Renamed Collection Category'}])
     save_json('data6.json', data6)
     print(f'Result 6: {res6} - Saved data6.json')
