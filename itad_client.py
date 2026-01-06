@@ -115,63 +115,37 @@ def test_OASes(OASes):
     return ok
 
 
-def get_data(security, endpoint, params, data):
+def send_request(security, method, endpoint, params, data):
+    '''
+    Docstring for get_data
+
+    :param security: tipe of security ('key' or 'oa2')
+    :param method: HTTP method ('GET', 'POST', 'PUT', 'DELETE', 'PATCH')
+    :param endpoint: API endpoint
+    :param params: parameters for the HTTP request
+    :param data: body data for the HTTP request
+    '''
+    # prepare URL and headers
     URL = BASE_URL + endpoint
     headers = {'Content-Type': 'application/json'}
     if security == 'key':
         params['key'] = API_KEY
     elif security == 'oa2':
         headers['Authorization'] = 'Bearer ' + access_token
-    response = requests.get(URL, headers=headers, params=params, data=data)
-    return response.status_code, response.json()
 
-
-def put_data(security, endpoint, params, data):
-    URL = BASE_URL + endpoint
-    headers = {'Content-Type': 'application/json'}
-    params = {}
-    if security == 'key':
-        params['key'] = API_KEY
-    elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + access_token
-    response = requests.put(URL, headers=headers, params=params, json=data)
-    return response.status_code
-
-
-def delete_data(security, endpoint, params, data):
-    URL = BASE_URL + endpoint
-    headers = {'Content-Type': 'application/json'}
-    params = {}
-    if security == 'key':
-        params['key'] = API_KEY
-    elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + access_token
-    response = requests.delete(URL, headers=headers, params=params, json=data)
-    return response.status_code
-
-
-def post_data(security, endpoint, params, data):
-    URL = BASE_URL + endpoint
-    headers = {'Content-Type': 'application/json'}
-    params = {}
-    if security == 'key':
-        params['key'] = API_KEY
-    elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + access_token
-    response = requests.post(URL, headers=headers, params=params, json=data)
-    return response.status_code
-
-
-def patch_data(security, endpoint, params, data):
-    URL = BASE_URL + endpoint
-    headers = {'Content-Type': 'application/json'}
-    params = {}
-    if security == 'key':
-        params['key'] = API_KEY
-    elif security == 'oa2':
-        headers['Authorization'] = 'Bearer ' + access_token
-    response = requests.patch(URL, headers=headers, params=params, json=data)
-    return response.status_code, response.json()
+    if (method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']):
+        resp = requests.request(method=method,
+                                url=URL,
+                                headers=headers,
+                                params=params,
+                                json=data)
+        if resp.content == b'':
+            return resp.status_code, None
+        else:
+            return resp.status_code, resp.json()
+    else:
+        print('Invalid HTTP method')
+        return 0, None
 
 
 if __name__ == '__main__':
@@ -182,43 +156,50 @@ if __name__ == '__main__':
     access_token = get_oauth_access_token()
 
     # test diferent endpoints, methods and security types
-    res1, data1 = get_data(security='oa2',
-                           endpoint='collection/groups/v1',
-                           params={},
-                           data={})
+    res1, data1 = send_request(method='GET',
+                               security='oa2',
+                               endpoint='collection/groups/v1',
+                               params={},
+                               data={})
     save_json('data1.json', data1)
     print(f'Result 1: {res1} - Saved data1.json')
 
-    res2, data2 = get_data(security='key',
-                           endpoint='games/info/v2',
-                           params={'id': '018d937f-11e6-715a-a82c-205cfda90ddd'},
-                           data={})
+    res2, data2 = send_request(method='GET',
+                               security='key',
+                               endpoint='games/info/v2',
+                               params={
+                                   'id': '018d937f-11e6-715a-a82c-205cfda90ddd'},
+                               data={})
     save_json('data2.json', data2)
     print(f'Result 2: {res2} - Saved data2.json')
 
-    res3 = put_data(security='oa2',
-                    endpoint='user/notes/v1',
-                    params={},
-                    data=[{'gid': '018d937f-11e6-715a-a82c-205cfda90ddd',
-                           'note': 'This is a test note {now}'}])
+    res3, data3 = send_request(method='PUT',
+                               security='oa2',
+                               endpoint='user/notes/v1',
+                               params={},
+                               data=[{'gid': '018d937f-11e6-715a-a82c-205cfda90ddd',
+                                      'note': 'This is a test note {now}'}])
     print(f'Result 3: {res3}')
 
-    res4 = delete_data(security='oa2',
-                       endpoint='user/notes/v1',
-                       params={},
-                       data=['018d937f-11e6-715a-a82c-205cfda90ddd'])
+    res4, data4 = send_request(method='DELETE',
+                               security='oa2',
+                               endpoint='user/notes/v1',
+                               params={},
+                               data=['018d937f-11e6-715a-a82c-205cfda90ddd'])
     print(f'Result 4: {res4}')
 
-    # res5 = post_data(security='oa2',
-    #                  endpoint='collection/groups/v1',
-    #                  params={},
-    #                  data={"title": "New Collection Category",
-    #                        "public": False})
-    # print(f'Result 5: {res5}')
+    res5, data5 = send_request(method='POST',
+                               security='oa2',
+                               endpoint='collection/groups/v1',
+                               params={},
+                               data={"title": "New Collection Category",
+                                     "public": False})
+    print(f'Result 5: {res5}')
 
-    res6, data6 = patch_data(security='oa2',
-                             endpoint='collection/groups/v1',
-                             params={},
-                             data=[{'id': 15099, 'title': 'Renamed Collection Category'}])
+    res6, data6 = send_request(method='PATCH',
+                               security='oa2',
+                               endpoint='collection/groups/v1',
+                               params={},
+                               data=[{'id': 15099, 'title': 'Renamed Collection Category'}])
     save_json('data6.json', data6)
     print(f'Result 6: {res6} - Saved data6.json')
