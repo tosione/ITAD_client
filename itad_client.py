@@ -115,7 +115,7 @@ def test_OASes(OASes):
     return ok
 
 
-def send_request(security, method, endpoint, params={}, headers={}, data={}):
+def send_request(method, endpoint, security, params={}, headers={}, data={}):
     '''
     Docstring for get_data
 
@@ -123,15 +123,25 @@ def send_request(security, method, endpoint, params={}, headers={}, data={}):
     :param method: HTTP method ('GET', 'POST', 'PUT', 'DELETE', 'PATCH')
     :param endpoint: API endpoint
     :param params: parameters for the HTTP request
+    :param headers: headers for the HTTP request
     :param data: body data for the HTTP request
     '''
-    # prepare URL and headers
-    URL = BASE_URL + endpoint
+
     headers['Content-Type'] = 'application/json'
+
     if security == 'key':
         params['key'] = API_KEY
     elif security == 'oa2':
         headers['Authorization'] = 'Bearer ' + access_token
+    else:
+        print('Invalid security type')
+        return 0, None
+
+    if endpoint.startswith('http') or endpoint == "":
+        print('Invalid endpoint')
+        return 0, None
+    else:
+        URL = BASE_URL + endpoint
 
     if (method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']):
         resp = requests.request(method=method,
