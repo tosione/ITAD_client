@@ -48,23 +48,23 @@ BASE_URL = 'https://api.isthereanydeal.com/'
 TOKEN_FILE = 'itad_tokens.json'
 
 
-def get_oauth_access_token():
+def get_access_token():
     # Create an OAuth2 Session
-    OASes = requests_oauthlib.OAuth2Session(client_id=CLIENT_ID,
-                                            redirect_uri=REDIRECT_URI,
-                                            scope=SCOPE,
-                                            pkce='S256')
+    oauth_session = requests_oauthlib.OAuth2Session(client_id=CLIENT_ID,
+                                                    redirect_uri=REDIRECT_URI,
+                                                    scope=SCOPE,
+                                                    pkce='S256')
 
     if os.path.exists(TOKEN_FILE):
-        OASes.token = load_json(TOKEN_FILE)
-        OASes.refresh_token(TOKEN_URL, auth=(CLIENT_ID, CLIENT_SECRET))
-        save_json(TOKEN_FILE, OASes.token)
+        oauth_session.token = load_json(TOKEN_FILE)
+        oauth_session.refresh_token(TOKEN_URL, auth=(CLIENT_ID, CLIENT_SECRET))
+        save_json(TOKEN_FILE, oauth_session.token)
     else:
-        obtain_new_tokens_from_ITAD(OASes)
-        save_json(TOKEN_FILE, OASes.token)
+        get_new_tokens_from_itad(oauth_session)
+        save_json(TOKEN_FILE, oauth_session.token)
         print(f'Created new tokens to file ({TOKEN_FILE})')
-    if test_OASes(OASes):
-        return OASes.token['access_token']
+    if test_oauth_session(oauth_session):
+        return oauth_session.token['access_token']
     else:
         return None
 
@@ -86,9 +86,9 @@ def load_json(filename):
         return None
 
 
-def obtain_new_tokens_from_ITAD(OASes):
+def get_new_tokens_from_itad(oauth_session):
     # Step 1: obtain authorization URL
-    authorization_url, state = OASes.authorization_url(AUTH_URL)
+    authorization_url, state = oauth_session.authorization_url(AUTH_URL)
 
     # Step 2: open URL in browser, ask user to authorize and copy the redirect URL
     print('Please go to this URL and authorize access:')
@@ -99,15 +99,16 @@ def obtain_new_tokens_from_ITAD(OASes):
     redirect_URL = input('\nPaste the full redirect URL here: ')
 
     # Step 4: Fetch the access token
-    OASes.fetch_token(TOKEN_URL, authorization_response=redirect_URL)
+    oauth_session.fetch_token(TOKEN_URL, authorization_response=redirect_URL)
 
-    print(f'Tokens expires in {OASes.token['expires_in']/3600/24} days.')
-    print(
-        f'Tokens expires at {datetime.datetime.fromtimestamp(OASes.token['expires_at'])}.')
+    print('Tokens expires in ',
+          oauth_session.token['expires_in']/3600/24, ' days')
+    print('Tokens expires at ',
+          datetime.datetime.fromtimestamp(oauth_session.token['expires_at']))
 
 
-def test_OASes(OASes):
-    ok = OASes.get(BASE_URL + 'user/info/v2').status_code == 200
+def test_oauth_session(oauth_session):
+    ok = oauth_session.get(BASE_URL + 'user/info/v2').status_code == 200
     if ok:
         printc('OAuth is working', color='green')
     else:
@@ -163,7 +164,7 @@ if __name__ == '__main__':
     if os.name == 'nt':
         os.system('cls')
 
-    access_token = get_oauth_access_token()
+    access_token = get_access_token()
 
     # test diferent endpoints, methods and security types
     res1, data1 = send_request(method='GET',
