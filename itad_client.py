@@ -150,6 +150,7 @@ def send_request(method, endpoint, security, params={}, header={}, body={}):
     :param data: body data for the HTTP request
     """
 
+    # prepare data
     header['Content-Type'] = 'application/json'
 
     if security == 'key':
@@ -161,11 +162,12 @@ def send_request(method, endpoint, security, params={}, header={}, body={}):
         return 0, None
 
     if endpoint.startswith('http') or endpoint == "":
-        print('Invalid endpoint')
+        print('Endpoint must not conatin full HTTP. Example: games/info/v2')
         return 0, None
     else:
         url = BASE_URL + endpoint
 
+    # make request
     if (method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']):
         resp = requests.request(method=method,
                                 url=url,
@@ -173,7 +175,7 @@ def send_request(method, endpoint, security, params={}, header={}, body={}):
                                 params=params,
                                 json=body)
         if resp.status_code >= 400:
-            # request error
+            # handle request error
             print(
                 f'HTTP error code({resp.status_code}): {resp.reason}. {resp.json()['reason_phrase']}')
             if 'details' in resp.json():
@@ -199,7 +201,7 @@ class ITADSearchGames:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'GET'
         endpoint = 'games/search/v1'
         security = 'key'
@@ -208,6 +210,7 @@ class ITADSearchGames:
         header = {}
         body = {}
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -237,7 +240,7 @@ class ITADGetGameInfo:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'GET'
         endpoint = 'games/info/v2'
         security = 'key'
@@ -245,6 +248,7 @@ class ITADGetGameInfo:
         header = {}
         body = {}
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -252,6 +256,7 @@ class ITADGetGameInfo:
                                                          header=header,
                                                          body=body)
 
+        # process response data
         if self.response_code == 200:
             self.game_info = self.response
             # self.game_id = self.response['id']
@@ -269,7 +274,7 @@ class ITADGetGamesFromWaitlist:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'GET'
         endpoint = 'waitlist/games/v1'
         security = 'oa2'
@@ -277,6 +282,7 @@ class ITADGetGamesFromWaitlist:
         header = {}
         body = {}
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -304,7 +310,7 @@ class ITADPutGamesIntoWaitlist:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'PUT'
         endpoint = 'waitlist/games/v1'
         security = 'oa2'
@@ -312,6 +318,7 @@ class ITADPutGamesIntoWaitlist:
         header = {}
         body = self.games_id
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -328,7 +335,7 @@ class ITADDelGamesFromWaitlist:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'DELETE'
         endpoint = 'waitlist/games/v1'
         security = 'oa2'
@@ -336,6 +343,7 @@ class ITADDelGamesFromWaitlist:
         header = {}
         body = self.games_id
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -351,7 +359,7 @@ class ITADGetGamesFromCollection:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'GET'
         endpoint = 'collection/games/v1'
         security = 'oa2'
@@ -359,6 +367,7 @@ class ITADGetGamesFromCollection:
         header = {}
         body = {}
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -386,7 +395,7 @@ class ITADPutGamesIntoCollection:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'PUT'
         endpoint = 'collection/games/v1'
         security = 'oa2'
@@ -394,6 +403,7 @@ class ITADPutGamesIntoCollection:
         header = {}
         body = self.games_id
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -410,7 +420,7 @@ class ITADDelGamesFromCollection:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'DELETE'
         endpoint = 'collection/games/v1'
         security = 'oa2'
@@ -418,6 +428,7 @@ class ITADDelGamesFromCollection:
         header = {}
         body = self.games_id
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -434,7 +445,7 @@ class ITADGetCopiesOfGames:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'GET'
         endpoint = 'collection/copies/v1'
         security = 'oa2'
@@ -442,6 +453,7 @@ class ITADGetCopiesOfGames:
         header = {}
         body = self.games_id
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -508,7 +520,7 @@ class ITADAddCopiesToGames:
                 f'Error: Parameter \'{nameof(self.tags)}\' length mismatch: ommiting')
             self.tags = None
 
-        # define & request data
+        # prepare data
         method = 'POST'
         endpoint = 'collection/copies/v1'
         security = 'oa2'
@@ -522,6 +534,7 @@ class ITADAddCopiesToGames:
                                  'tags':  self.tags}
                                 ).to_dict(orient='records')
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -571,7 +584,7 @@ class ITADUpdateCopiesFromGames:
                 f'Error: Parameter \'{nameof(self.copies_tags)}\' length mismatch: ommiting')
             self.copies_tags = None
 
-        # define & request data
+        # prepare data
         method = 'PATCH'
         endpoint = 'collection/copies/v1'
         security = 'oa2'
@@ -588,6 +601,7 @@ class ITADUpdateCopiesFromGames:
                                  'tags':  self.copies_tags}
                                 ).to_dict(orient='records')
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -604,7 +618,7 @@ class ITADDeleteCopies:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'DELETE'
         endpoint = 'collection/copies/v1'
         security = 'oa2'
@@ -612,6 +626,7 @@ class ITADDeleteCopies:
         header = {}
         body = self.copies_id
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -627,7 +642,7 @@ class ITADGetCategories:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'GET'
         endpoint = 'collection/groups/v1'
         security = 'oa2'
@@ -635,6 +650,7 @@ class ITADGetCategories:
         header = {}
         body = {}
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -645,6 +661,7 @@ class ITADGetCategories:
         # process response data
         if self.response_code == 200:
             self.df = pandas.DataFrame(self.response)
+
             self.categories_id = self.df['id'].to_list()
             self.categories_title = self.df['title'].to_list()
             self.categories_is_public = self.df['public'].to_list()
@@ -659,7 +676,7 @@ class ITADCreateNewCategory:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'POST'
         endpoint = 'collection/groups/v1'
         security = 'oa2'
@@ -668,6 +685,7 @@ class ITADCreateNewCategory:
         body = {'title': self.category_title,
                 'public': self.category_public}
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -704,7 +722,7 @@ class ITADUpdateCategories:
             print('Parameter length mismatch, parameter ommited')
             self.categories_update_position = None
 
-        # define & request data
+        # prepare data
         method = 'PATCH'
         endpoint = 'collection/groups/v1'
         security = 'oa2'
@@ -716,6 +734,7 @@ class ITADUpdateCategories:
                                  'position':  self.categories_update_position}
                                 ).to_dict(orient='records')
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -726,6 +745,7 @@ class ITADUpdateCategories:
         # process response data
         if self.response_code == 200:
             self.df = pandas.DataFrame(self.response)
+
             self.categories_id = self.df['id'].to_list()
             self.categories_title = self.df['title'].to_list()
             self.categories_is_public = self.df['public'].to_list()
@@ -739,7 +759,7 @@ class ITADDeleteCategories:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'DELETE'
         endpoint = 'collection/groups/v1'
         security = 'oa2'
@@ -747,6 +767,7 @@ class ITADDeleteCategories:
         header = {}
         body = self.categories_ids_to_delete
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -762,7 +783,7 @@ class ITADGetUserInfo:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'GET'
         endpoint = 'user/info/v2'
         security = 'oa2'
@@ -770,6 +791,7 @@ class ITADGetUserInfo:
         header = {}
         body = {}
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -789,7 +811,7 @@ class ITADGetUserNotes:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'GET'
         endpoint = 'user/notes/v1'
         security = 'oa2'
@@ -797,6 +819,7 @@ class ITADGetUserNotes:
         header = {}
         body = {}
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -807,6 +830,7 @@ class ITADGetUserNotes:
         # process response data
         if self.response_code == 200:
             self.df = pandas.DataFrame(self.response)
+
             self.found_games_id = self.df['gid'].to_list()
             self.found_notes = self.df['note'].to_list()
 
@@ -824,7 +848,7 @@ class ITADPutUserNotesToGame:
             print('Parameter length mismatch, parameter ommited')
             return
 
-        # define & request data
+        # prepare data
         method = 'PUT'
         endpoint = 'user/notes/v1'
         security = 'oa2'
@@ -834,6 +858,7 @@ class ITADPutUserNotesToGame:
                                  'note':  self.games_note}
                                 ).to_dict(orient='records')
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
@@ -850,7 +875,7 @@ class ITADDelUserNotesFromGame:
         self.execute()
 
     def execute(self):
-        # define & request data
+        # prepare data
         method = 'DELETE'
         endpoint = 'user/notes/v1'
         security = 'oa2'
@@ -858,6 +883,7 @@ class ITADDelUserNotesFromGame:
         header = {}
         body = self.games_id
 
+        # make request
         self.response_code, self.response = send_request(method=method,
                                                          endpoint=endpoint,
                                                          security=security,
