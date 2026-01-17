@@ -269,6 +269,43 @@ class ITADGetGameInfo:
             self.game_urls = self.resp['urls']
 
 
+def get_games_title(games_id):
+    assert games_id is not None, MSG_PARAM_NONE
+    assert type(games_id) is list
+    titles = []
+    for gid in games_id:
+        # make request
+        resp_code, resp = send_request(method='GET',
+                                       endpoint='games/info/v2',
+                                       security='key',
+                                       params={'id': gid},
+                                       header={},
+                                       body={}
+                                       )
+        # process response data
+        if resp_code == 200:
+            titles.append(resp['title'])
+        else:
+            titles.append(None)
+    return titles
+
+
+def get_game_title(game_id):
+    # make request
+    resp_code, resp = send_request(method='GET',
+                                   endpoint='games/info/v2',
+                                   security='key',
+                                   params={'id': game_id},
+                                   header={},
+                                   body={}
+                                   )
+    # process response data
+    if resp_code == 200:
+        return resp['title']
+    else:
+        return None
+
+
 class ITADGetGamesFromWaitlist:
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-get
 
@@ -804,6 +841,23 @@ if __name__ == '__main__':
     # print(f'Game title: {x2.game_title}')
     # print(f'More info with \'game_info\' variable')
 
+    # ids = ['018d937f-5024-7396-b919-616080c759a4',
+    #        '018d937f-2950-736f-bf13-1833d2fcd8af',
+    #        '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
+    #        '018d937f-5233-732a-9727-ab9b4d72c304']
+    # titles = get_games_title(ids)
+    # print('')
+    # print('Search titles for various Games ID')
+    # print(ids)
+    # print(titles)
+
+    # id = '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0'
+    # title = get_game_title(id)
+    # print('')
+    # print('Search titles for one Game ID')
+    # print(id)
+    # print(title)
+
     # ==================== WAITLIST  ====================
 
     # x3 = ITADGetGamesFromWaitlist()
@@ -863,21 +917,21 @@ if __name__ == '__main__':
     print(f'{x9.copies_number} copies found:')
     print(x9.df)
 
-    x10 = ITADAddCopiesToGames(copies_game_id=None,
-                               copies_redeemed=[True,
-                                                True],
-                               copies_shop_id=None,
-                               copies_price=None,
-                               copies_note=None,
-                               copies_tags=None
-                               )
-    print('')
-    print(f'{len(x10.copies_game_id)} copies added to games: {x10.copies_game_id}')
+    # x10 = ITADAddCopiesToGames(copies_game_id=None,
+    #                            copies_redeemed=[True,
+    #                                             True],
+    #                            copies_shop_id=None,
+    #                            copies_price=None,
+    #                            copies_note=None,
+    #                            copies_tags=None
+    #                            )
+    # print('')
+    # print(f'{len(x10.copies_game_id)} copies added to games: {x10.copies_game_id}')
 
-    x9.execute()
-    print('')
-    print(f'{x9.copies_number} copies found:')
-    print(x9.df)
+    # x9.execute()
+    # print('')
+    # print(f'{x9.copies_number} copies found:')
+    # print(x9.df)
 
     # x10 = ITADUpdateCopiesFromGames([182096370, 182096372],
     #                                 [False, True],
