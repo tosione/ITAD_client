@@ -37,7 +37,6 @@ import pandas
 import requests_oauthlib
 import requests
 from print_color import print as printc
-from varname import nameof
 
 
 # Local application/library specific imports
@@ -63,6 +62,8 @@ AUTH_URL = 'https://isthereanydeal.com/oauth/authorize/'
 TOKEN_URL = 'https://isthereanydeal.com/oauth/token/'
 BASE_URL = 'https://api.isthereanydeal.com/'
 TOKEN_FILE = 'itad_tokens.json'
+MSG_PARAM_WRONG_LEN = 'Parameter lenght mismatch'
+MSG_PARAM_NONE = 'Parameter missing'
 
 
 def get_access_token():
@@ -158,11 +159,11 @@ def send_request(method, endpoint, security, params={}, header={}, body={}):
     elif security == 'oa2':
         header['Authorization'] = 'Bearer ' + access_token
     else:
-        print('Invalid security type: valid ''key'' or ''oa2'' ')
+        raise ValueError('Invalid security type: valid ''key'' or ''oa2'' ')
         return 0, None
 
     if endpoint.startswith('http') or endpoint == "":
-        print('Endpoint must not conatin full HTTP. Example: games/info/v2')
+        raise ValueError('Endpoint contains full HTTP addres?')
         return 0, None
     else:
         url = BASE_URL + endpoint
@@ -192,6 +193,14 @@ def send_request(method, endpoint, security, params={}, header={}, body={}):
         return 0, None
 
 
+def len_opt_arg(x, n):
+    return x is None or len(x) == n
+
+
+def len_oblig_arg(x, n):
+    return len(x) == n
+
+
 class ITADSearchGames:
     # https://docs.isthereanydeal.com/#tag/Lookup/operation/games-search-v1
 
@@ -201,32 +210,28 @@ class ITADSearchGames:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'GET'
-        endpoint = 'games/search/v1'
-        security = 'key'
-        params = {'title': self.game_title_to_search,
-                  'results': self.max_results}
-        header = {}
-        body = {}
+        # verify input data
+        assert self.game_title_to_search is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='GET',
+                                                 endpoint='games/search/v1',
+                                                 security='key',
+                                                 params={'title': self.game_title_to_search,
+                                                         'results': self.max_results},
+                                                 header={},
+                                                 body={}
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            df = pandas.DataFrame(self.response)
+        if self.resp_code == 200:
+            df = pandas.DataFrame(self.resp)
 
             self.found_games_id = df['id'].to_list()
             self.found_games_slug = df['slug'].to_list()
             self.found_games_title = df['title'].to_list()
             self.found_games_type = df['type'].to_list()
-            self.found_games_mature = df['mature'].to_list()
+            self.found_game_mature = df['mature'].to_list()
             self.found_games_assets = df['assets'].to_list()
 
             self.found_games_number = len(self.found_games_id)
@@ -240,31 +245,28 @@ class ITADGetGameInfo:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'GET'
-        endpoint = 'games/info/v2'
-        security = 'key'
-        params = {'id': self.game_id}
-        header = {}
-        body = {}
+        # verify input data
+        assert self.game_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='GET',
+                                                 endpoint='games/info/v2',
+                                                 security='key',
+                                                 params={'id': self.game_id},
+                                                 header={},
+                                                 body={}
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.game_info = self.response
-            # self.game_id = self.response['id']
-            self.game_slug = self.response['slug']
-            self.game_title = self.response['title']
-            self.game_type = self.response['type']
-            self.game_app_id = self.response['appid']
-            self.game_urls = self.response['urls']
+        if self.resp_code == 200:
+            self.game_info = self.resp
+
+            # put some of the info into variables
+            self.game_slug = self.resp['slug']
+            self.game_title = self.resp['title']
+            self.game_type = self.resp['type']
+            self.game_app_id = self.resp['appid']
+            self.game_urls = self.resp['urls']
 
 
 class ITADGetGamesFromWaitlist:
@@ -274,32 +276,27 @@ class ITADGetGamesFromWaitlist:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'GET'
-        endpoint = 'waitlist/games/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = {}
-
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='GET',
+                                                 endpoint='waitlist/games/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body={}
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.df = pandas.DataFrame(self.response)
+        if self.resp_code == 200:
+            self.df = pandas.DataFrame(self.resp)
 
             self.waitlist_games_id = self.df['id'].to_list()
             self.waitlist_games_slug = self.df['slug'].to_list()
             self.waitlist_games_title = self.df['title'].to_list()
             self.waitlist_games_assets = self.df['assets'].to_list()
-            self.waitlist_games_mature = self.df['mature'].to_list()
+            self.waitlist_games_is_mature = self.df['mature'].to_list()
             self.waitlist_games_date_added = self.df['added'].to_list()
+
+            self.waitlist_games_number = len(self.waitlist_games_id)
 
 
 class ITADPutGamesIntoWaitlist:
@@ -310,21 +307,17 @@ class ITADPutGamesIntoWaitlist:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'PUT'
-        endpoint = 'waitlist/games/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = self.games_id
+        # verify input data
+        assert self.games_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='PUT',
+                                                 endpoint='waitlist/games/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=self.games_id
+                                                 )
 
 
 class ITADDelGamesFromWaitlist:
@@ -335,21 +328,17 @@ class ITADDelGamesFromWaitlist:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'DELETE'
-        endpoint = 'waitlist/games/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = self.games_id
+        # verify input data
+        assert self.games_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='DELETE',
+                                                 endpoint='waitlist/games/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=self.games_id
+                                                 )
 
 
 class ITADGetGamesFromCollection:
@@ -359,32 +348,27 @@ class ITADGetGamesFromCollection:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'GET'
-        endpoint = 'collection/games/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = {}
-
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='GET',
+                                                 endpoint='collection/games/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body={}
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.df = pandas.DataFrame(self.response)
+        if self.resp_code == 200:
+            self.df = pandas.DataFrame(self.resp)
 
             self.collection_games_id = self.df['id'].to_list()
             self.collection_games_slug = self.df['slug'].to_list()
             self.collection_games_title = self.df['title'].to_list()
             self.collection_games_assets = self.df['assets'].to_list()
-            self.collection_games_mature = self.df['mature'].to_list()
+            self.collection_games_is_mature = self.df['mature'].to_list()
             self.collection_games_date_added = self.df['added'].to_list()
+
+            self.collection_games_number = len(self.collection_games_id)
 
 
 class ITADPutGamesIntoCollection:
@@ -395,21 +379,17 @@ class ITADPutGamesIntoCollection:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'PUT'
-        endpoint = 'collection/games/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = self.games_id
+        # verify input data
+        assert self.games_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='PUT',
+                                                 endpoint='collection/games/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=self.games_id
+                                                 )
 
 
 class ITADDelGamesFromCollection:
@@ -420,21 +400,17 @@ class ITADDelGamesFromCollection:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'DELETE'
-        endpoint = 'collection/games/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = self.games_id
+        # verify input data
+        assert self.games_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='DELETE',
+                                                 endpoint='collection/games/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=self.games_id
+                                                 )
 
 
 class ITADGetCopiesOfGames:
@@ -445,169 +421,123 @@ class ITADGetCopiesOfGames:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'GET'
-        endpoint = 'collection/copies/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = self.games_id
+        # verify input data
+        assert self.games_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='GET',
+                                                 endpoint='collection/copies/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=self.games_id
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.df = pandas.DataFrame(self.response)
+        if self.resp_code == 200:
+            self.df = pandas.DataFrame(self.resp)
             self.games = pandas.DataFrame(self.df['game'].to_list())
-            self.shops = pandas.DataFrame(self.df['shop'].to_list())
+            # self.shops = pandas.DataFrame(self.df['shop'].to_list())  # TBD: take into account that some shops may be None
 
             self.copies_id = self.df['id'].to_list()
             self.copies_game_id = self.games['id'].to_list()
-            self.copies_shop_id = self.shops['id'].to_list()
-            self.copies_shop_name = self.shops['name'].to_list()
+            # self.copies_shop_id = self.shops['id'].to_list()          #TBD
+            # self.copies_shop_name = self.shops['name'].to_list()      #TBD
+            self.copies_shop = self.df['shop'].to_list()
             self.copies_redeemed = self.df['redeemed'].to_list()
             self.copies_price = self.df['price'].to_list()
             self.copies_note = self.df['note'].to_list()
             self.copies_tags = self.df['tags'].to_list()
-            self.copies_added = self.df['added'].to_list()
+            self.copies_date_added = self.df['added'].to_list()
+
+            self.copies_number = len(self.copies_game_id)
 
 
 class ITADAddCopiesToGames:
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-post
 
-    def __init__(self, game_id, redeemed, shop_id=None, price=None, note=None, tags=None):
-        self.game_id = game_id
-        self.redeemed = redeemed
-        self.shop_id = shop_id
-        self.price = price
-        self.note = note
-        self.tags = tags
-        self.execute()
-
-    def execute(self):
-        # verify input data
-
-        n = len(self.game_id)
-
-        if (self.redeemed is None or n != len(self.redeemed)):
-            print(
-                f'Error: Parameter \'{nameof(self.redeemed)}\' length mismatch: exiting')
-            return
-
-        if (self.shop_id is not None and n != len(self.shop_id)):
-            print(
-                f'Error: Parameter \'{nameof(self.shop_id)}\' length mismatch: ommiting')
-            self.shop_id = None
-
-        if (self.price is not None and n != len(self.price)):
-            print(
-                f'Error: Parameter \'{nameof(self.price)}\' length mismatch: ommiting')
-            self.price = None
-
-        if (self.note is not None and n != len(self.note)):
-            print(
-                f'Error: Parameter \'{nameof(self.note)}\' length mismatch: ommiting')
-            self.note = None
-
-        if (self.tags is not None and n != len(self.tags)):
-            print(
-                f'Error: Parameter \'{nameof(self.tags)}\' length mismatch: ommiting')
-            self.tags = None
-
-        # prepare data
-        method = 'POST'
-        endpoint = 'collection/copies/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = pandas.DataFrame({'gameId': self.game_id,
-                                 'redeemed':  self.redeemed,
-                                 'shop':  self.shop_id,
-                                 'price':  self.price,
-                                 'note':  self.note,
-                                 'tags':  self.tags}
-                                ).to_dict(orient='records')
-
-        # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
-
-
-class ITADUpdateCopiesFromGames:
-    # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-patch
-
-    def __init__(self, copies_id, redeemed=None, shop_id=None, price=None, copies_note=None, copies_tags=None):
-        self.copies_id = copies_id
-        self.redeemed = redeemed
-        self.shop_id = shop_id
-        self.price = price
+    def __init__(self, copies_game_id, copies_redeemed, copies_shop_id=None, copies_price=None, copies_note=None, copies_tags=None):
+        self.copies_game_id = copies_game_id
+        self.copies_redeemed = copies_redeemed
+        self.copies_shop_id = copies_shop_id
+        self.copies_price = copies_price
         self.copies_note = copies_note
         self.copies_tags = copies_tags
         self.execute()
 
     def execute(self):
         # verify input data
-        n = len(self.copies_id)
+        assert self.copies_game_id is not None, MSG_PARAM_NONE
+        assert self.copies_redeemed is not None, MSG_PARAM_NONE
 
-        if (self.redeemed is None or n != len(self.redeemed)):
-            print(
-                f'Error: Parameter \'{nameof(self.redeemed)}\' length mismatch: ommiting')
-            self.redeemed = None
-
-        if (self.shop_id is not None and n != len(self.shop_id)):
-            print(
-                f'Error: Parameter \'{nameof(self.shop_id)}\' length mismatch: ommiting')
-            self.shop_id = None
-
-        if (self.price is not None and n != len(self.price)):
-            print(
-                f'Error: Parameter \'{nameof(self.price)}\' length mismatch: ommiting')
-            self.price = None
-
-        if (self.copies_note is not None and n != len(self.copies_note)):
-            print(
-                f'Error: Parameter \'{nameof(self.copies_note)}\' length mismatch: ommiting')
-            self.copies_note = None
-
-        if (self.copies_tags is not None and n != len(self.copies_tags)):
-            print(
-                f'Error: Parameter \'{nameof(self.copies_tags)}\' length mismatch: ommiting')
-            self.copies_tags = None
+        n = len(self.copies_game_id)
+        assert len_oblig_arg(self.copies_redeemed, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.copies_shop_id, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.copies_price, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.copies_note, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.copies_tags, n), MSG_PARAM_WRONG_LEN
 
         # prepare data
-        method = 'PATCH'
-        endpoint = 'collection/copies/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-
-        body = pandas.DataFrame({'id': self.copies_id,
-                                 'redeemed':  self.redeemed,
-                                 'shop':  self.shop_id,
-                                 'price':  pandas.DataFrame({'amount': self.price,
-                                                             'currency':  'EUR'}
-                                                            ).to_dict(orient='records'),
-                                 'note':  self.copies_note,
-                                 'tags':  self.copies_tags}
-                                ).to_dict(orient='records')
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='POST',
+                                                 endpoint='collection/copies/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=pandas.DataFrame({'gameId': self.copies_game_id,
+                                                                        'redeemed':  self.copies_redeemed,
+                                                                        'shop':  self.copies_shop_id,
+                                                                        'price':  self.copies_price,
+                                                                        'note':  self.copies_note,
+                                                                        'tags':  self.copies_tags}
+                                                                       ).to_dict(orient='records')
+                                                 )
+
+
+# ===============================================================================================
+
+class ITADUpdateCopiesFromGames:
+    # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-patch
+
+    def __init__(self, copies_id, copies_redeemed=None, copies_shop_id=None, copies_price_in_eur=None, copies_note=None, copies_tags=None):
+        self.copies_id = copies_id
+        self.copies_redeemed = copies_redeemed
+        self.copies_shop_id = copies_shop_id
+        self.copies_price_in_eur = copies_price_in_eur
+        self.copies_note = copies_note
+        self.copies_tags = copies_tags
+        self.execute()
+
+    def execute(self):
+        # verify input data
+        assert self.copies_id is not None, MSG_PARAM_NONE
+
+        n = len(self.copies_id)
+        assert len_opt_arg(self.copies_redeemed, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.copies_shop_id, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.copies_price_in_eur, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.copies_note, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.copies_tags, n), MSG_PARAM_WRONG_LEN
+
+        # prepare data
+
+        # make request
+        self.resp_code, self.resp = send_request(method='PATCH',
+                                                 endpoint='collection/copies/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=pandas.DataFrame({'id': self.copies_id,
+                                                                        'redeemed': self.copies_redeemed,
+                                                                        'shop':  self.copies_shop_id,
+                                                                        'price':  pandas.DataFrame({'amount': self.copies_price_in_eur,
+                                                                                                    'currency':  'EUR'}
+                                                                                                   ).to_dict(orient='records'),
+                                                                        'note':  self.copies_note,
+                                                                        'tags':  self.copies_tags}
+                                                                       ).to_dict(orient='records')
+                                                 )
 
 
 class ITADDeleteCopies:
@@ -618,21 +548,17 @@ class ITADDeleteCopies:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'DELETE'
-        endpoint = 'collection/copies/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = self.copies_id
+        # verify input data
+        assert self.copies_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='DELETE',
+                                                 endpoint='collection/copies/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=self.copies_id
+                                                 )
 
 
 class ITADGetCategories:
@@ -642,25 +568,18 @@ class ITADGetCategories:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'GET'
-        endpoint = 'collection/groups/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = {}
-
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='GET',
+                                                 endpoint='collection/groups/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body={}
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.df = pandas.DataFrame(self.response)
+        if self.resp_code == 200:
+            self.df = pandas.DataFrame(self.resp)
 
             self.categories_id = self.df['id'].to_list()
             self.categories_title = self.df['title'].to_list()
@@ -676,75 +595,65 @@ class ITADCreateNewCategory:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'POST'
-        endpoint = 'collection/groups/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = {'title': self.category_title,
-                'public': self.category_public}
+        # verify input data
+        assert self.category_title is not None, MSG_PARAM_NONE
+        assert self.category_public is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='POST',
+                                                 endpoint='collection/groups/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body={'title': self.category_title,
+                                                       'public': self.category_public}
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.created_category_id = self.response['id']
-            self.created_category_title = self.response['title']
-            self.created_category_public = self.response['public']
+        if self.resp_code == 200:
+            self.created_category_id = self.resp['id']
+            self.created_category_title = self.resp['title']
+            self.created_category_public = self.resp['public']
 
 
 class ITADUpdateCategories:
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-patch
 
-    def __init__(self, categories_update_id, categories_update_title, categories_update_is_public, categories_update_position):
-        self.categories_update_id = categories_update_id
-        self.categories_update_title = categories_update_title
-        self.categories_update_is_public = categories_update_is_public
-        self.categories_update_position = categories_update_position
+    def __init__(self, categories_upd_id, categories_upd_title, categories_upd_is_public, categories_upd_position):
+        self.categories_upd_id = categories_upd_id
+        self.categories_upd_title = categories_upd_title
+        self.categories_upd_public = categories_upd_is_public
+        self.categories_upd_position = categories_upd_position
         self.execute()
 
     def execute(self):
-        n = len(self.categories_update_id)
-        if (n != len(self.categories_update_title)):
-            print('Parameter length mismatch, parameter ommited')
-            self.categories_update_title = None
-        if (n != len(self.categories_update_is_public)):
-            print('Parameter length mismatch, parameter ommited')
-            self.categories_update_is_public = None
-        if (n != len(self.categories_update_position)):
-            print('Parameter length mismatch, parameter ommited')
-            self.categories_update_position = None
+        # verify input data
+        assert self.categories_upd_id is not None, MSG_PARAM_NONE
+
+        n = len(self.categories_upd_id)
+        assert len_opt_arg(self.categories_upd_title, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.categories_upd_public, n), MSG_PARAM_WRONG_LEN
+        assert len_opt_arg(self.categories_upd_position,
+                           n), MSG_PARAM_WRONG_LEN
 
         # prepare data
-        method = 'PATCH'
-        endpoint = 'collection/groups/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = pandas.DataFrame({'id': self.categories_update_id,
-                                 'title':  self.categories_update_title,
-                                 'public':  self.categories_update_is_public,
-                                 'position':  self.categories_update_position}
-                                ).to_dict(orient='records')
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='PATCH',
+                                                 endpoint='collection/groups/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=pandas.DataFrame({'id': self.categories_upd_id,
+                                                                        'title':  self.categories_upd_title,
+                                                                        'public':  self.categories_upd_public,
+                                                                        'position':  self.categories_upd_position}
+                                                                       ).to_dict(orient='records')
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.df = pandas.DataFrame(self.response)
+        if self.resp_code == 200:
+            self.df = pandas.DataFrame(self.resp)
 
             self.categories_id = self.df['id'].to_list()
             self.categories_title = self.df['title'].to_list()
@@ -754,26 +663,22 @@ class ITADUpdateCategories:
 class ITADDeleteCategories:
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-delete
 
-    def __init__(self, categories_ids_to_delete):
-        self.categories_ids_to_delete = categories_ids_to_delete
+    def __init__(self, categories_id_to_delete):
+        self.categories_id_to_delete = categories_id_to_delete
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'DELETE'
-        endpoint = 'collection/groups/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = self.categories_ids_to_delete
+        # verify input data
+        assert self.categories_id_to_delete is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='DELETE',
+                                                 endpoint='collection/groups/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=self.categories_id_to_delete
+                                                 )
 
 
 class ITADGetUserInfo:
@@ -783,25 +688,18 @@ class ITADGetUserInfo:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'GET'
-        endpoint = 'user/info/v2'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = {}
-
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='GET',
+                                                 endpoint='user/info/v2',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body={}
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.username = self.response['username']
+        if self.resp_code == 200:
+            self.username = self.resp['username']
 
 
 class ITADGetUserNotes:
@@ -811,25 +709,18 @@ class ITADGetUserNotes:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'GET'
-        endpoint = 'user/notes/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = {}
-
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='GET',
+                                                 endpoint='user/notes/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body={}
+                                                 )
 
         # process response data
-        if self.response_code == 200:
-            self.df = pandas.DataFrame(self.response)
+        if self.resp_code == 200:
+            self.df = pandas.DataFrame(self.resp)
 
             self.found_games_id = self.df['gid'].to_list()
             self.found_notes = self.df['note'].to_list()
@@ -844,27 +735,23 @@ class ITADPutUserNotesToGame:
         self.execute()
 
     def execute(self):
-        if (len(self.games_id) != len(self.games_note)):
-            print('Parameter length mismatch, parameter ommited')
-            return
+        # verify input data
+        assert self.games_id is not None, MSG_PARAM_NONE
+        assert self.games_note is not None, MSG_PARAM_NONE
 
-        # prepare data
-        method = 'PUT'
-        endpoint = 'user/notes/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = pandas.DataFrame({'gid': self.games_id,
-                                 'note':  self.games_note}
-                                ).to_dict(orient='records')
+        n = len(self.games_id)
+        assert len_oblig_arg(self.games_note, n), MSG_PARAM_WRONG_LEN
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='PUT',
+                                                 endpoint='user/notes/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=pandas.DataFrame({'gid': self.games_id,
+                                                                        'note':  self.games_note}
+                                                                       ).to_dict(orient='records')
+                                                 )
 
 
 class ITADDelUserNotesFromGame:
@@ -875,21 +762,17 @@ class ITADDelUserNotesFromGame:
         self.execute()
 
     def execute(self):
-        # prepare data
-        method = 'DELETE'
-        endpoint = 'user/notes/v1'
-        security = 'oa2'
-        params = {}
-        header = {}
-        body = self.games_id
+        # verify input data
+        assert self.games_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.response_code, self.response = send_request(method=method,
-                                                         endpoint=endpoint,
-                                                         security=security,
-                                                         params=params,
-                                                         header=header,
-                                                         body=body)
+        self.resp_code, self.resp = send_request(method='DELETE',
+                                                 endpoint='user/notes/v1',
+                                                 security='oa2',
+                                                 params={},
+                                                 header={},
+                                                 body=self.games_id
+                                                 )
 
 
 if __name__ == '__main__':
@@ -909,55 +792,93 @@ if __name__ == '__main__':
 
     # ==================== SEARCH GAMES & INFO ====================
 
-    x1 = ITADSearchGames(game_title_to_search='teken',
-                         max_results=10)
-    print('')
-    print(f'{x1.found_games_number} games found games for: {x1.game_title_to_search}')
-    print(x1.found_games_title)
+    # x1 = ITADSearchGames(game_title_to_search='teken',
+    #                      max_results=10)
+    # print('')
+    # print(f'{x1.found_games_number} games found games for: {x1.game_title_to_search}')
+    # print(x1.found_games_title)
 
-    x2 = ITADGetGameInfo(game_id='018d937f-6ef1-73d9-ad41-390d2d748c30')
-    print('')
-    print(f'game info for {x2.game_id}')
-    print(f'game info for {x2.game_title}')
+    # x2 = ITADGetGameInfo(game_id='018d937f-6ef1-73d9-ad41-390d2d748c30')
+    # print('')
+    # print(f'Game ID: {x2.game_id}')
+    # print(f'Game title: {x2.game_title}')
+    # print(f'More info with \'game_info\' variable')
 
     # ==================== WAITLIST  ====================
 
-    x3 = ITADGetGamesFromWaitlist()
-    print(x3.waitlist_games_title[1:5])
+    # x3 = ITADGetGamesFromWaitlist()
+    # print('')
+    # print(f'{x3.waitlist_games_number} games in Wailist, showwing 1-10:')
+    # print(x3.waitlist_games_title[0:10])
 
-    x4 = ITADPutGamesIntoWaitlist(['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                   '018d937f-5233-732a-9727-ab9b4d72c304'])
+    # x4 = ITADPutGamesIntoWaitlist(['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
+    #                                '018d937f-5233-732a-9727-ab9b4d72c304'])
+    # print('')
+    # print('Added 2 games to waitlist')
 
-    x5 = ITADDelGamesFromWaitlist(['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                   '018d937f-5233-732a-9727-ab9b4d72c304'])
+    # x3.execute()
+    # print('')
+    # print(f'{x3.waitlist_games_number} games in Wailist')
+
+    # x5 = ITADDelGamesFromWaitlist(['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
+    #                                '018d937f-5233-732a-9727-ab9b4d72c304'])
+    # print('')
+    # print('Removed 2 games from waitlist')
+
+    # x3.execute()
+    # print('')
+    # print(f'{x3.waitlist_games_number} games in Wailist.')
 
     # ==================== COLLECTION ====================
     # x6 = ITADGetGamesFromCollection()
-    # print(x6.collection_games_title[1:5])
+    # print('')
+    # print(f'{x6.collection_games_number} games in collection, showwing 1-10:')
+    # print(x6.collection_games_title[0:10])
 
     # x7 = ITADPutGamesIntoCollection(['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
     #                                  '018d937f-5233-732a-9727-ab9b4d72c304'])
+    # print('')
+    # print('Added 2 games to collection')
+
+    # x6.execute()
+    # print('')
+    # print(f'{x6.collection_games_number} games in collection')
 
     # x8 = ITADDelGamesFromCollection(['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
     #                                  '018d937f-5233-732a-9727-ab9b4d72c304'])
+    # print('')
+    # print('Removed 2 games from collection')
 
-    # COPIES
-    # x9 = ITADGetCopiesOfGames(['018d937f-5024-7396-b919-616080c759a4',
-    #                            '018d937f-2950-736f-bf13-1833d2fcd8af',
-    #                            '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-    #                            '018d937f-5233-732a-9727-ab9b4d72c304'])
-    # print(x9.df)
+    # x6.execute()
+    # print('')
+    # print(f'{x6.collection_games_number} games in collection')
 
-    # x10 = ITADAddCopiesToGames(game_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-    #                                     '018d937f-5233-732a-9727-ab9b4d72c304'],
-    #                            redeemed=[True,
-    #                                      True],
-    #                            shop_id=[2,
-    #                                     2],
-    #                            price=None,
-    #                            note=None,
-    #                            tags=None
-    #                            )
+    # ==================== COPIES ====================
+
+    x9 = ITADGetCopiesOfGames(['018d937f-5024-7396-b919-616080c759a4',
+                               '018d937f-2950-736f-bf13-1833d2fcd8af',
+                               '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
+                               '018d937f-5233-732a-9727-ab9b4d72c304'])
+    print('')
+    print(f'{x9.copies_number} copies found:')
+    print(x9.df)
+
+    x10 = ITADAddCopiesToGames(copies_game_id=None,
+                               copies_redeemed=[True,
+                                                True],
+                               copies_shop_id=None,
+                               copies_price=None,
+                               copies_note=None,
+                               copies_tags=None
+                               )
+    print('')
+    print(f'{len(x10.copies_game_id)} copies added to games: {x10.copies_game_id}')
+
+    x9.execute()
+    print('')
+    print(f'{x9.copies_number} copies found:')
+    print(x9.df)
+
     # x10 = ITADUpdateCopiesFromGames([182096370, 182096372],
     #                                 [False, True],
     #                                 [3, 3],
