@@ -1,30 +1,41 @@
-
 """
 itad_client.py
-IsThereAnyDeal (ITAD) API client using OAuth2 and API Key
+
+IsThereAnyDeal (ITAD) API client using OAuth2 and API Key.
+
+This module provides a client for interacting with the IsThereAnyDeal
+(ITAD) API. It supports OAuth2 authentication for personal data and API
+key authentication for non-personal data.
+
+The client allows you to perform various operations such as retrieving
+user information, searching for games, managing collections, managing
+waitlists, and more.It provides high-level functions for making API
+requests and handling authentication.
+
+The client uses the `requests_oauthlib` library for OAuth2
+authentication and the `requests` library for making HTTP requests.
+It also uses the `print_color` library for printing colored output.
+
+The client requires the following environment variables to be set:
+- `API_KEY`: The API key for authentication.
+- `CLIENT_ID`: The client ID for OAuth2 authentication.
+- `CLIENT_SECRET`: The client secret for OAuth2 authentication.
+- `REDIRECT_URI`: The redirect URI for OAuth2 authentication.
+- `SCOPE`: The scope of the API access.
+For privacy reasons, the API_KEY, CLIENT_ID, and CLIENT_SECRET are
+stored in the `private_data.py` module. User must generate its own
+`private_data.py` with this constants.
+
+For more information on the ITAD API, refer to the official
+documentation: https://docs.isthereanydeal.com/
 
 Author: tosione
 Date: 2026-01-03
-
-References:
-ITAD API:
-    https://docs.isthereanydeal.com/
-OAuth2:
-    https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html
-    https://docs.secureauth.com/ciam/en/proof-key-of-code-exchange--pkce-.html
-    https://bytebytego.com/guides/oauth-2-explained-with -siple-terms/
-    https://docs.authlib.org/en/latest/client/oauth2.html
-HTML:
-    https://www.w3schools.com/tags/ref_httpmethods.asp
-    https://requests.readthedocs.io/en/latest/
-    https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
-JSON:
-    https://www.json.org/json-en.html
+Version: 0.1
 """
 
 __version__ = '0.1'
 __author__ = 'tosione'
-
 
 # Standard library imports
 import os
@@ -35,10 +46,9 @@ import pandas
 from pandas import DataFrame
 
 # Related third party imports
-import requests_oauthlib
 import requests
+import requests_oauthlib
 import print_color
-
 
 # Local application/library specific imports
 import private_data
@@ -70,6 +80,15 @@ MSG_PARAM_EMPTY = 'Parameter is empty'
 
 def get_access_token():
     # Create an OAuth2 Session
+    """
+    Get an access token to use with the ITAD API.
+
+    First, try to load existing tokens from a JSON file.
+    If the file does not exist, obtain new tokens using the PKCE flow.
+    Save the new tokens to the same JSON file.
+    If the tokens are valid, return the access token.
+    Otherwise, return None.
+    """
     oauth_session = requests_oauthlib.OAuth2Session(client_id=CLIENT_ID,
                                                     redirect_uri=REDIRECT_URI,
                                                     scope=SCOPE,
@@ -107,11 +126,23 @@ def load_json(filename):
 
 
 def get_new_tokens_from_itad(oauth_session):
-    """_summary_
-
-    Args:
-        oauth_session (_type_): _description_
     """
+    Obtain new tokens from ITAD using the PKCE flow.
+
+    This function will open a browser window for the user to authorize access
+    to the ITAD API. After authorization, it will fetch the access token and
+    save it to a local JSON file.
+
+    Parameters
+    ----------
+    oauth_session : requests_oauthlib.OAuth2Session
+        An OAuth2 session with the client ID, redirect URI and scope.
+
+    Returns
+    -------
+    None
+    """
+
     # Step 1: obtain authorization URL
     authorization_url, state = oauth_session.authorization_url(AUTH_URL)
 
@@ -143,14 +174,29 @@ def test_oauth_session(oauth_session):
 
 def send_request(method, endpoint, security, params={}, header={}, body={}):
     """
-    Docstring for get_data
+    Send a request to the ITAD API.
 
-    :param security: tipe of security ('key' or 'oa2')
-    :param method: HTTP method ('GET', 'POST', 'PUT', 'DELETE', 'PATCH')
-    :param endpoint: API endpoint
-    :param params: parameters for the HTTP request
-    :param headers: headers for the HTTP request
-    :param data: body data for the HTTP request
+    Parameters
+    ----------
+    method : str
+        The HTTP method to use. Valid values are 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'.
+    endpoint : str
+        The API endpoint to use. If it contains the full HTTP address, raise a ValueError.
+    security : str
+        The security type to use. Valid values are 'key' or 'oa2'.
+    params : dict, optional
+        The query parameters to use.
+    header : dict, optional
+        The headers to use.
+    body : dict, optional
+        The JSON body data to send.
+
+    Returns
+    -------
+    status_code : int
+        The HTTP status code of the response.
+    response : dict
+        The JSON data of the response. If the response was empty, return None.
     """
 
     # prepare data
@@ -945,7 +991,12 @@ class ITADDelUserNotesFromGame:
 
 
 if __name__ == '__main__':
-    os.system('clear')
+
+    """
+    Example of use of the ITAD API classes
+    """
+
+    # ==================== INITIAL SETTINGS ====================
 
     pandas.set_option('display.max_colwidth', None)
 
