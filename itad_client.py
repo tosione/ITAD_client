@@ -30,8 +30,8 @@ __author__ = 'tosione'
 import os
 import webbrowser
 import json
-import datetime
-import pandas
+from datetime import datetime
+from pandas import DataFrame
 
 # Related third party imports
 import requests_oauthlib
@@ -63,7 +63,8 @@ TOKEN_URL = 'https://isthereanydeal.com/oauth/token/'
 BASE_URL = 'https://api.isthereanydeal.com/'
 TOKEN_FILE = 'itad_tokens.json'
 MSG_PARAM_WRONG_LEN = 'Parameter lenght mismatch'
-MSG_PARAM_NONE = 'Parameter missing'
+MSG_PARAM_NONE = 'Parameter is None'
+MSG_PARAM_EMPTY = 'Parameter is empty'
 
 
 def get_access_token():
@@ -201,14 +202,17 @@ def len_oblig_arg(x, n):
     return len(x) == n
 
 
-def print_list_vert(x):
+def printv(x):
     print(*x, sep='\n')
 
 
 class ITADSearchGames:
     # https://docs.isthereanydeal.com/#tag/Lookup/operation/games-search-v1
+    # https://docs.isthereanydeal.com/#tag/Game/operation/games-search-v1
 
-    def __init__(self, game_title_to_search, max_results=None):
+    def __init__(self,
+                 game_title_to_search,
+                 max_results=None):
         self.game_title_to_search = game_title_to_search
         self.max_results = max_results
         self.execute()
@@ -229,7 +233,7 @@ class ITADSearchGames:
 
         # process response data
         if self.resp_code == 200:
-            self.df = pandas.DataFrame(self.resp)
+            self.df = DataFrame(self.resp)
             if not self.df.empty:
                 self.found_games_id = self.df['id'].to_list()
                 self.found_games_slug = self.df['slug'].to_list()
@@ -251,7 +255,8 @@ class ITADSearchGames:
 class ITADGetGameInfo:
     # https://docs.isthereanydeal.com/#tag/Game/operation/games-info-v2
 
-    def __init__(self, game_id):
+    def __init__(self,
+                 game_id):
         self.game_id = game_id
         self.execute()
 
@@ -335,7 +340,7 @@ class ITADGetGamesFromWaitlist:
 
         # process response data
         if self.resp_code == 200:
-            self.df = pandas.DataFrame(self.resp)
+            self.df = DataFrame(self.resp)
             if not self.df.empty:
                 self.waitlist_games_id = self.df['id'].to_list()
                 self.waitlist_games_slug = self.df['slug'].to_list()
@@ -357,13 +362,15 @@ class ITADGetGamesFromWaitlist:
 class ITADPutGamesIntoWaitlist:
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-put
 
-    def __init__(self, games_id):
+    def __init__(self,
+                 games_id):
         self.games_id = games_id
         self.execute()
 
     def execute(self):
         # verify input data
         assert self.games_id is not None, MSG_PARAM_NONE
+        assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
         self.resp_code, self.resp = send_request(method='PUT',
@@ -378,13 +385,15 @@ class ITADPutGamesIntoWaitlist:
 class ITADDelGamesFromWaitlist:
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-delete
 
-    def __init__(self, games_id):
+    def __init__(self,
+                 games_id):
         self.games_id = games_id
         self.execute()
 
     def execute(self):
         # verify input data
         assert self.games_id is not None, MSG_PARAM_NONE
+        assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
         self.resp_code, self.resp = send_request(method='DELETE',
@@ -414,7 +423,7 @@ class ITADGetGamesFromCollection:
 
         # process response data
         if self.resp_code == 200:
-            self.df = pandas.DataFrame(self.resp)
+            self.df = DataFrame(self.resp)
             if not self.df.empty:
                 self.collection_games_id = self.df['id'].to_list()
                 self.collection_games_slug = self.df['slug'].to_list()
@@ -436,13 +445,15 @@ class ITADGetGamesFromCollection:
 class ITADPutGamesIntoCollection:
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-put
 
-    def __init__(self, games_id):
+    def __init__(self,
+                 games_id):
         self.games_id = games_id
         self.execute()
 
     def execute(self):
         # verify input data
         assert self.games_id is not None, MSG_PARAM_NONE
+        assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
         self.resp_code, self.resp = send_request(method='PUT',
@@ -457,13 +468,15 @@ class ITADPutGamesIntoCollection:
 class ITADDelGamesFromCollection:
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-delete
 
-    def __init__(self, games_id):
+    def __init__(self,
+                 games_id):
         self.games_id = games_id
         self.execute()
 
     def execute(self):
         # verify input data
         assert self.games_id is not None, MSG_PARAM_NONE
+        assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
         self.resp_code, self.resp = send_request(method='DELETE',
@@ -477,14 +490,17 @@ class ITADDelGamesFromCollection:
 
 class ITADGetCopiesOfGames:
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-get
+    # Description is wrong, it requieres Game IDs
 
-    def __init__(self, games_id):
+    def __init__(self,
+                 games_id):
         self.games_id = games_id
         self.execute()
 
     def execute(self):
         # verify input data
         assert self.games_id is not None, MSG_PARAM_NONE
+        assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
         self.resp_code, self.resp = send_request(method='GET',
@@ -497,15 +513,15 @@ class ITADGetCopiesOfGames:
 
         # process response data
         if self.resp_code == 200:
-            self.df = pandas.DataFrame(self.resp)
+            self.df = DataFrame(self.resp)
             if not self.df.empty:
-                self.games = pandas.DataFrame(self.df['game'].to_list())
+                self.games = DataFrame(self.df['game'].to_list())
 
                 # replace None shops with dictionaries of None values
                 # to avoid exception with DataFrame
                 shop_list = [{'id': None, 'Name': None}
                              if shop is None else shop for shop in self.df['shop'].to_list()]
-                self.shops = pandas.DataFrame(shop_list)
+                self.shops = DataFrame(shop_list)
 
                 self.copies_id = self.df['id'].to_list()
                 self.copies_game_id = self.games['id'].to_list()
@@ -536,7 +552,13 @@ class ITADGetCopiesOfGames:
 class ITADAddCopiesToGames:
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-post
 
-    def __init__(self, copies_game_id, copies_redeemed, copies_shop_id=None, copies_price_eur=None, copies_note=None, copies_tags=None):
+    def __init__(self,
+                 copies_game_id,
+                 copies_redeemed,
+                 copies_shop_id=None,
+                 copies_price_eur=None,
+                 copies_note=None,
+                 copies_tags=None):
         self.copies_game_id = copies_game_id
         self.copies_redeemed = copies_redeemed
         self.copies_shop_id = copies_shop_id
@@ -570,13 +592,13 @@ class ITADAddCopiesToGames:
                                                  security='oa2',
                                                  params={},
                                                  header={},
-                                                 body=pandas.DataFrame({'gameId': self.copies_game_id,
-                                                                        'redeemed':  self.copies_redeemed,
-                                                                        'shop': self.copies_shop_id,
-                                                                        'price': self.copies_prices,
-                                                                        'note':  self.copies_note,
-                                                                        'tags':  self.copies_tags}
-                                                                       ).to_dict(orient='records')
+                                                 body=DataFrame({'gameId': self.copies_game_id,
+                                                                 'redeemed':  self.copies_redeemed,
+                                                                 'shop': self.copies_shop_id,
+                                                                 'price': self.copies_prices,
+                                                                 'note':  self.copies_note,
+                                                                 'tags':  self.copies_tags}
+                                                                ).to_dict(orient='records')
                                                  )
 
 
@@ -585,7 +607,13 @@ class ITADAddCopiesToGames:
 class ITADUpdateCopiesFromGames:
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-patch
 
-    def __init__(self, copies_id, copies_redeemed=None, copies_shop_id=None, copies_price_eur=None, copies_note=None, copies_tags=None):
+    def __init__(self,
+                 copies_id,
+                 copies_redeemed=None,
+                 copies_shop_id=None,
+                 copies_price_eur=None,
+                 copies_note=None,
+                 copies_tags=None):
         self.copies_id = copies_id
         self.copies_redeemed = copies_redeemed
         self.copies_shop_id = copies_shop_id
@@ -618,20 +646,21 @@ class ITADUpdateCopiesFromGames:
                                                  security='oa2',
                                                  params={},
                                                  header={},
-                                                 body=pandas.DataFrame({'id': self.copies_id,
-                                                                        'redeemed': self.copies_redeemed,
-                                                                        'shop': self.copies_shop_id,
-                                                                        'price': self.copies_prices,
-                                                                        'note': self.copies_note,
-                                                                        'tags': self.copies_tags}
-                                                                       ).to_dict(orient='records')
+                                                 body=DataFrame({'id': self.copies_id,
+                                                                 'redeemed': self.copies_redeemed,
+                                                                 'shop': self.copies_shop_id,
+                                                                 'price': self.copies_prices,
+                                                                 'note': self.copies_note,
+                                                                 'tags': self.copies_tags}
+                                                                ).to_dict(orient='records')
                                                  )
 
 
 class ITADDeleteCopies:
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-delete
 
-    def __init__(self, copies_id):
+    def __init__(self,
+                 copies_id):
         self.copies_id = copies_id
         self.execute()
 
@@ -667,7 +696,7 @@ class ITADGetCategories:
 
         # process response data
         if self.resp_code == 200:
-            self.df = pandas.DataFrame(self.resp)
+            self.df = DataFrame(self.resp)
             if not self.df.empty:
                 self.categories_id = self.df['id'].to_list()
                 self.categories_title = self.df['title'].to_list()
@@ -681,7 +710,9 @@ class ITADGetCategories:
 class ITADCreateNewCategory:
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-post
 
-    def __init__(self, category_title, category_public):
+    def __init__(self,
+                 category_title,
+                 category_public):
         self.category_title = category_title
         self.category_public = category_public
         self.execute()
@@ -711,7 +742,11 @@ class ITADCreateNewCategory:
 class ITADUpdateCategories:
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-patch
 
-    def __init__(self, categories_upd_id, categories_upd_title, categories_upd_public, categories_upd_position):
+    def __init__(self,
+                 categories_upd_id,
+                 categories_upd_title=None,
+                 categories_upd_public=None,
+                 categories_upd_position=None):
         self.categories_upd_id = categories_upd_id
         self.categories_upd_title = categories_upd_title
         self.categories_upd_public = categories_upd_public
@@ -736,16 +771,16 @@ class ITADUpdateCategories:
                                                  security='oa2',
                                                  params={},
                                                  header={},
-                                                 body=pandas.DataFrame({'id': self.categories_upd_id,
-                                                                        'title':  self.categories_upd_title,
-                                                                        'public':  self.categories_upd_public,
-                                                                        'position':  self.categories_upd_position}
-                                                                       ).to_dict(orient='records')
+                                                 body=DataFrame({'id': self.categories_upd_id,
+                                                                 'title':  self.categories_upd_title,
+                                                                 'public':  self.categories_upd_public,
+                                                                 'position':  self.categories_upd_position}
+                                                                ).to_dict(orient='records')
                                                  )
 
         # process response data
         if self.resp_code == 200:
-            self.df = pandas.DataFrame(self.resp)
+            self.df = DataFrame(self.resp)
             if not self.df.empty:
                 self.categories_id = self.df['id'].to_list()
                 self.categories_title = self.df['title'].to_list()
@@ -759,13 +794,14 @@ class ITADUpdateCategories:
 class ITADDeleteCategories:
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-delete
 
-    def __init__(self, categories_id_to_delete):
-        self.categories_id_to_delete = categories_id_to_delete
+    def __init__(self,
+                 categories_del_id):
+        self.categories_del_id = categories_del_id
         self.execute()
 
     def execute(self):
         # verify input data
-        assert self.categories_id_to_delete is not None, MSG_PARAM_NONE
+        assert self.categories_del_id is not None, MSG_PARAM_NONE
 
         # make request
         self.resp_code, self.resp = send_request(method='DELETE',
@@ -773,7 +809,7 @@ class ITADDeleteCategories:
                                                  security='oa2',
                                                  params={},
                                                  header={},
-                                                 body=self.categories_id_to_delete
+                                                 body=self.categories_del_id
                                                  )
 
 
@@ -816,7 +852,7 @@ class ITADGetUserNotes:
 
         # process response data
         if self.resp_code == 200:
-            self.df = pandas.DataFrame(self.resp)
+            self.df = DataFrame(self.resp)
             if not self.df.empty:
                 self.found_games_id = self.df['gid'].to_list()
                 self.found_notes = self.df['note'].to_list()
@@ -828,7 +864,9 @@ class ITADGetUserNotes:
 class ITADPutUserNotesToGame:
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-put
 
-    def __init__(self, games_id, games_note):
+    def __init__(self,
+                 games_id,
+                 games_note):
         self.games_id = games_id
         self.games_note = games_note
         self.execute()
@@ -847,16 +885,17 @@ class ITADPutUserNotesToGame:
                                                  security='oa2',
                                                  params={},
                                                  header={},
-                                                 body=pandas.DataFrame({'gid': self.games_id,
-                                                                        'note':  self.games_note}
-                                                                       ).to_dict(orient='records')
+                                                 body=DataFrame({'gid': self.games_id,
+                                                                 'note':  self.games_note}
+                                                                ).to_dict(orient='records')
                                                  )
 
 
 class ITADDelUserNotesFromGame:
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-delete
 
-    def __init__(self, games_id):
+    def __init__(self,
+                 games_id):
         self.games_id = games_id
         self.execute()
 
@@ -892,8 +931,8 @@ if __name__ == '__main__':
     debug_parts = {'game_info': False,
                    'waitlist': False,
                    'collection': False,
-                   'copies': True,
-                   'categories': False,
+                   'copies': False,
+                   'categories': True,
                    'user': False
                    }
 
@@ -916,12 +955,12 @@ if __name__ == '__main__':
                '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
                '018d937f-5233-732a-9727-ab9b4d72c304']
         titles = get_games_title(games_id=ids)
-        print('\nSearch titles for various Games ID')
-        print(pandas.DataFrame({'ID': ids, 'titles': titles}))
+        print('\nGet titles for various Game IDs')
+        print(DataFrame({'ID': ids, 'titles': titles}))
 
         id = '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0'
         title = get_game_title(game_id=id)
-        print('\nSearch titles for one Game ID')
+        print('\nGet title for one Game ID')
         print(id)
         print(title)
 
@@ -966,38 +1005,38 @@ if __name__ == '__main__':
     if debug_parts['copies']:
         x9 = ITADGetCopiesOfGames(games_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
                                             '018d937f-5233-732a-9727-ab9b4d72c304'])
-        print(f'\n{x9.copies_number} copies found:')
+        print('\nCopies found:')
         print(x9.df)
 
-        # x10 = ITADAddCopiesToGames(copies_game_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0', '018d937f-5233-732a-9727-ab9b4d72c304'],
-        #                            copies_redeemed=[True, True],
-        #                            copies_shop_id=None,
-        #                            copies_price_eur=None,
-        #                            copies_note=None,
-        #                            copies_tags=None
-        #                            )
-        # print(f'\n{len(x10.copies_game_id)} copies added to games:')
-        # print(pandas.DataFrame({'Copies': x10.copies_game_id}))
-        # x9.execute()
-        # print(f'\n{x9.copies_number} copies found:')
-        # print(x9.df)
+        x10 = ITADAddCopiesToGames(copies_game_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0', '018d937f-5233-732a-9727-ab9b4d72c304'],
+                                   copies_redeemed=[True, True],
+                                   copies_shop_id=None,
+                                   copies_price_eur=None,
+                                   copies_note=None,
+                                   copies_tags=None
+                                   )
+        print('\nCopies added to games:')
+        print(DataFrame({'Copies': x10.copies_game_id}))
+        x9.execute()
+        print('\nCopies found:')
+        print(x9.df)
 
-        # x10 = ITADUpdateCopiesFromGames(copies_id=[182131346, 182131381],
-        #                                 copies_redeemed=[False, True],
-        #                                 copies_shop_id=[3, 3],
-        #                                 copies_price_eur=[5, 6],
-        #                                 copies_note=['note x', 'note 2'],
-        #                                 copies_tags=[['tag1', 'tag2'], ['tag3', 'tag3']])
-        # x9.execute()
-        # print(f'\n{x9.copies_number} copies found:')
-        # print(x9.df)
+        x10 = ITADUpdateCopiesFromGames(copies_id=[182198518, 182198641],
+                                        copies_redeemed=[False, True],
+                                        copies_shop_id=[3, 3],
+                                        copies_price_eur=[5, 6],
+                                        copies_note=['note x', 'note 2'],
+                                        copies_tags=[['tag1', 'tag2'], ['tag3', 'tag3']])
+        x9.execute()
+        print('\nCopies found:')
+        print(x9.df)
 
-        # x11 = ITADDeleteCopies(copies_id=x9.copies_id)
-        # print(f'\nDeleted copies with ID:')
-        # print_list_vert(x11.copies_id)
-        # x9.execute()
-        # print(f'\n{x9.copies_number} copies found:')
-        # print(x9.df)
+        x11 = ITADDeleteCopies(copies_id=x9.copies_id)
+        print('\nDeleted copies with ID:')
+        printv(x11.copies_id)
+        x9.execute()
+        print('\nCopies found:')
+        print(x9.df)
 
     # ==================== CATERORIES ====================
     if debug_parts['categories']:
@@ -1005,23 +1044,37 @@ if __name__ == '__main__':
         print('\nAll categories:')
         print(x13.df)
 
-        x14 = ITADCreateNewCategory(category_title='new_category2',
+        x14 = ITADCreateNewCategory(category_title=f'Cat {datetime.now()}',
                                     category_public=False)
         print('\nAdded a new category:')
         print(f'ID={x14.created_category_id}')
         print(f'Title={x14.created_category_title}')
         print(f'Public={x14.created_category_public}')
 
-        x15 = ITADUpdateCategories(categories_update_id=[15199, 15200, 15201],
-                                   categories_update_title=['a', 'b', 'c'],
-                                   categories_update_public=[
-                                       False, False, False],
-                                   categories_update_position=[99, 99, 99])
-        print(f'\nUpdated {len(x15.categories_upd_id)} categories')
+        x15 = ITADUpdateCategories(categories_upd_id=[15199,
+                                                      15200,
+                                                      15201],
+                                   categories_upd_title=[f'Test cat. {datetime.now()}',
+                                                         f'Test cat. {datetime.now()}',
+                                                         f'Test cat. {datetime.now()}'],
+                                   categories_upd_public=[False,
+                                                          False,
+                                                          False],
+                                   categories_upd_position=[91,
+                                                            91,
+                                                            93])
+        print('\nUpdated categories:')
+        print(DataFrame({'ID': x15.categories_upd_id,
+                         'Title': x15.categories_upd_title,
+                         'Public': x15.categories_upd_public,
+                         'Position': x15.categories_upd_position}))
+        print('\nAll categories:')
         print(x15.df)
 
-        x16 = ITADDeleteCategories([15177])
-        print(f'\nDeleted {len(x16.categories_id_to_delete)} categories')
+        x16 = ITADDeleteCategories([x14.created_category_id])
+        print('\nDeleted categories:')
+        printv(x16.categories_del_id)
+        print('\nAll categories:')
         print(x15.df)
 
     # ==================== USER ====================
