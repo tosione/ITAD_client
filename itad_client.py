@@ -31,12 +31,13 @@ import os
 import webbrowser
 import json
 from datetime import datetime
+import pandas
 from pandas import DataFrame
 
 # Related third party imports
 import requests_oauthlib
 import requests
-from print_color import print as printc
+import print_color
 
 
 # Local application/library specific imports
@@ -81,7 +82,7 @@ def get_access_token():
     else:
         get_new_tokens_from_itad(oauth_session)
         save_json(TOKEN_FILE, oauth_session.token)
-        print(f'Created new tokens to file ({TOKEN_FILE})')
+        print_ok(f'Created new tokens to file ({TOKEN_FILE})')
     if test_oauth_session(oauth_session):
         return oauth_session.token['access_token']
     else:
@@ -93,7 +94,7 @@ def save_json(filename, data):
         with open(filename, 'w') as f:
             json.dump(data, f, indent=4, check_circular=True)
     except Exception as e:
-        print('Error saving JSON file:', e)
+        print_err('Error saving JSON file:', e)
 
 
 def load_json(filename):
@@ -101,7 +102,7 @@ def load_json(filename):
         with open(filename, 'r') as f:
             return json.load(f)
     except Exception as e:
-        print('Error loading JSON file:', e)
+        print_err('Error loading JSON file:', e)
         return None
 
 
@@ -134,9 +135,9 @@ def get_new_tokens_from_itad(oauth_session):
 def test_oauth_session(oauth_session):
     ok = oauth_session.get(BASE_URL + 'user/info/v2').status_code == 200
     if ok:
-        printc('OAuth is working', color='green')
+        print_ok('OAuth is working')
     else:
-        printc('OAuth is not working', color='red')
+        print_err('OAuth is not working')
     return ok
 
 
@@ -178,10 +179,10 @@ def send_request(method, endpoint, security, params={}, header={}, body={}):
                                 json=body)
         if resp.status_code >= 400:
             # handle request error
-            print(
+            print_err(
                 f'HTTP error code({resp.status_code}): {resp.reason}. {resp.json()['reason_phrase']}')
             if 'details' in resp.json():
-                print(f'\tDetails: {resp.json()['details']}')
+                print_err(f'\tDetails: {resp.json()['details']}')
             return resp.status_code, None
         elif resp.content == b'':
             # request ok with empty response
@@ -190,7 +191,7 @@ def send_request(method, endpoint, security, params={}, header={}, body={}):
             # request ok
             return resp.status_code, resp.json()
     else:
-        print('Invalid HTTP method')
+        print_err('Invalid HTTP method')
         return 0, None
 
 
@@ -202,8 +203,21 @@ def len_oblig_arg(x, n):
     return len(x) == n
 
 
-def printv(x):
+def print_vert(x):
     print(*x, sep='\n')
+
+
+def print_tit(x):
+    print('')
+    print_color.print(x, color='blue')
+
+
+def print_err(x):
+    print_color.print(x, color='red')
+
+
+def print_ok(x):
+    print_color.print(x, color='green')
 
 
 class ITADSearchGames:
@@ -320,6 +334,22 @@ def get_game_title(game_id):
         return resp['title']
     else:
         return None
+
+
+def get_game_url(game_id, redirect=False):
+    if redirect:
+        # gets redirected address, takes longer
+        return requests.get(f'https://isthereanydeal.com/game/id:{game_id}/').url
+    else:
+        return f'https://isthereanydeal.com/game/id:{game_id}/info/'
+
+
+def get_games_url(games_id, redirect=False):
+    if redirect:
+        # gets redirected addresses, takes longer
+        return [requests.get(f'https://isthereanydeal.com/game/id:{game_id}/').url for game_id in games_id]
+    else:
+        return [f'https://isthereanydeal.com/game/id:{game_id}/info/' for game_id in games_id]
 
 
 class ITADGetGamesFromWaitlist:
@@ -493,14 +523,14 @@ class ITADGetCopiesOfGames:
     # Description is wrong, it requieres Game IDs
 
     def __init__(self,
-                 games_id):
-        self.games_id = games_id
+                 games_id_to_search):
+        self.games_id_to_search = games_id_to_search
         self.execute()
 
     def execute(self):
         # verify input data
-        assert self.games_id is not None, MSG_PARAM_NONE
-        assert self.games_id is not [], MSG_PARAM_EMPTY
+        assert self.games_id_to_search is not None, MSG_PARAM_NONE
+        assert self.games_id_to_search is not [], MSG_PARAM_EMPTY
 
         # make request
         self.resp_code, self.resp = send_request(method='GET',
@@ -508,7 +538,7 @@ class ITADGetCopiesOfGames:
                                                  security='oa2',
                                                  params={},
                                                  header={},
-                                                 body=self.games_id
+                                                 body=self.games_id_to_search
                                                  )
 
         # process response data
@@ -519,7 +549,7 @@ class ITADGetCopiesOfGames:
 
                 # replace None shops with dictionaries of None values
                 # to avoid exception with DataFrame
-                shop_list = [{'id': None, 'Name': None}
+                shop_list = [{'id': None, 'name': None}
                              if shop is None else shop for shop in self.df['shop'].to_list()]
                 self.shops = DataFrame(shop_list)
 
@@ -551,6 +581,7 @@ class ITADGetCopiesOfGames:
 
 class ITADAddCopiesToGames:
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-post
+    # will also add games to collection if no already there
 
     def __init__(self,
                  copies_game_id,
@@ -914,183 +945,204 @@ class ITADDelUserNotesFromGame:
 
 
 if __name__ == '__main__':
-    # # Clear console on Windows
-    # if os.name == 'nt':
-    #     os.system('cls')
+    os.system('clear')
+
+    pandas.set_option('display.max_colwidth', None)
+
+    print_tit('Start test')
 
     access_token = get_access_token()
 
     # ==================== EXAMPLE GAMES ====================
-    #
-    # 018d937f-3a3b-7210-bd2d-0d1dfb1d84c0 https://isthereanydeal.com/game/red-dead-redemption-2/info/
-    # 018d937f-5233-732a-9727-ab9b4d72c304 https://isthereanydeal.com/game/final-fantasy/info/
-    #
-    # 018d937f-5024-7396-b919-616080c759a4 view-source:https://isthereanydeal.com/game/the-ramp/info/
-    # 018d937f-2950-736f-bf13-1833d2fcd8af https://isthereanydeal.com/game/cypher/info/
+    # Tip: use games you don't have in your collection or watlist to avoid modification of yor data
+    game_id1 = '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0'  # RDR2
+    game_id2 = '018d937f-5233-732a-9727-ab9b4d72c304'  # FF
 
-    debug_parts = {'game_info': False,
-                   'waitlist': False,
-                   'collection': False,
-                   'copies': False,
+    debug_parts = {'game_info': True,
+                   'waitlist': True,
+                   'collection': True,
+                   'copies': True,
                    'categories': True,
-                   'user': False
+                   'user': True,
                    }
 
     # ==================== SEARCH GAMES & INFO ====================
     if debug_parts['game_info']:
 
-        x1 = ITADSearchGames(game_title_to_search='teken',
-                             max_results=10)
-        print(
-            f'\n{x1.found_games_number} games found games for: {x1.game_title_to_search}')
-        print(x1.found_games_title)
+        x1 = ITADSearchGames(game_title_to_search='teken 8',
+                             max_results=999)
+        print_tit(
+            f'{x1.found_games_number} games found games for \'{x1.game_title_to_search}\', showing 10:')
+        print_vert(x1.found_games_title[0:10])
 
-        x2 = ITADGetGameInfo(game_id='018d937f-6ef1-73d9-ad41-390d2d748c30')
-        print(f'\nGame ID: {x2.game_id}')
-        print(f'Game title: {x2.game_title}')
-        print('More info with \'game_info\' variable')
+        x2 = ITADGetGameInfo(game_id=game_id1)
+        print_tit(f'Get game info for Game ID: {x2.game_id}')
+        print(x2.game_info)
 
-        ids = ['018d937f-5024-7396-b919-616080c759a4',
-               '018d937f-2950-736f-bf13-1833d2fcd8af',
-               '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-               '018d937f-5233-732a-9727-ab9b4d72c304']
+        ids = [game_id1,
+               game_id2]
         titles = get_games_title(games_id=ids)
-        print('\nGet titles for various Game IDs')
-        print(DataFrame({'ID': ids, 'titles': titles}))
+        urls = get_games_url(games_id=ids)
+        print_tit('Get titles and URLs for various Game IDs')
+        print(DataFrame({'ID': ids, 'titles': titles, 'urls': urls}))
 
-        id = '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0'
+        id = game_id1
         title = get_game_title(game_id=id)
-        print('\nGet title for one Game ID')
-        print(id)
-        print(title)
+        url = get_game_url(game_id=id)
+        print_tit('Get title and URL for one Game ID')
+        print(DataFrame({'ID': [id], 'title': [title], 'urls': [url]}))
 
     # ==================== WAITLIST  ====================
     if debug_parts['waitlist']:
 
         x3 = ITADGetGamesFromWaitlist()
-        print(f'\n{x3.waitlist_games_number} games in Wailist, showwing 1-10:')
-        print(x3.waitlist_games_title[0:10])
+        print_tit(f'{x3.waitlist_games_number} games in Wailist, showing 10:')
+        print_vert(x3.waitlist_games_title[0:10])
 
-        x4 = ITADPutGamesIntoWaitlist(games_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                                '018d937f-5233-732a-9727-ab9b4d72c304'])
-        print(f'\nAdded {len(x4.games_id)} games to waitlist')
-        x3.execute()
-        print(f'\n{x3.waitlist_games_number} games in Wailist')
+        x4 = ITADPutGamesIntoWaitlist(games_id=[game_id1, game_id2])
+        print_tit(f'Added {len(x4.games_id)} games to waitlist:')
+        print_vert(x4.games_id)
 
-        x5 = ITADDelGamesFromWaitlist(games_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                                '018d937f-5233-732a-9727-ab9b4d72c304'])
-        print(f'\nRemoved {len(x5.games_id)} games from waitlist')
         x3.execute()
-        print(f'\n{x3.waitlist_games_number} games in Wailist.')
+        print_tit(f'{x3.waitlist_games_number} games in Wailist')
+
+        x5 = ITADDelGamesFromWaitlist(games_id=[game_id1, game_id2])
+        print_tit(f'Removed {len(x5.games_id)} games from waitlist:')
+        print_vert(x5.games_id)
+        x3.execute()
+        print_tit(f'{x3.waitlist_games_number} games in Wailist.')
 
     # ==================== COLLECTION ====================
     if debug_parts['collection']:
         x6 = ITADGetGamesFromCollection()
-        print(f'\n{x6.collection_games_number} games in collection, showwing 1-10:')
-        print(x6.collection_games_title[0:10])
+        print_tit(
+            f'{x6.collection_games_number} games in collection, showing 10:')
+        print_vert(x6.collection_games_title[0:10])
 
-        x7 = ITADPutGamesIntoCollection(games_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                                  '018d937f-5233-732a-9727-ab9b4d72c304'])
-        print(f'\nAdded {len(x7.games_id)} games to collection')
+        x7 = ITADPutGamesIntoCollection(games_id=[game_id1, game_id2])
+        print_tit(f'Added {len(x7.games_id)} games to collection:')
+        print_vert(x7.games_id)
         x6.execute()
-        print(f'\n{x6.collection_games_number} games in collection')
+        print_tit(f'{x6.collection_games_number} games in collection')
 
-        x8 = ITADDelGamesFromCollection(games_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                                  '018d937f-5233-732a-9727-ab9b4d72c304'])
-        print(f'\nRemoved {len(x8.games_id)} games from collection')
+        x8 = ITADDelGamesFromCollection(games_id=[game_id1, game_id2])
+        print_tit(f'Removed {len(x8.games_id)} games from collection:')
+        print_vert(x8.games_id)
         x6.execute()
-        print(f'\n{x6.collection_games_number} games in collection')
+        print_tit(f'{x6.collection_games_number} games in collection')
 
     # ==================== COPIES ====================
     if debug_parts['copies']:
-        x9 = ITADGetCopiesOfGames(games_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                            '018d937f-5233-732a-9727-ab9b4d72c304'])
-        print('\nCopies found:')
+        x9 = ITADGetCopiesOfGames(games_id_to_search=[game_id1, game_id2])
+        print_tit('Copies found:')
         print(x9.df)
 
-        x10 = ITADAddCopiesToGames(copies_game_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0', '018d937f-5233-732a-9727-ab9b4d72c304'],
+        x10 = ITADAddCopiesToGames(copies_game_id=[game_id1, game_id2],
                                    copies_redeemed=[True, True],
-                                   copies_shop_id=None,
+                                   copies_shop_id=[1, 1],
                                    copies_price_eur=None,
                                    copies_note=None,
                                    copies_tags=None
                                    )
-        print('\nCopies added to games:')
+        print_tit('Copies added to games (games also added to colletion):')
         print(DataFrame({'Copies': x10.copies_game_id}))
         x9.execute()
-        print('\nCopies found:')
+        print_tit('Copies found after addition:')
         print(x9.df)
 
-        x10 = ITADUpdateCopiesFromGames(copies_id=[182198518, 182198641],
-                                        copies_redeemed=[False, True],
+        x10 = ITADUpdateCopiesFromGames(copies_id=x9.copies_id,
+                                        copies_redeemed=[False, False],
                                         copies_shop_id=[3, 3],
                                         copies_price_eur=[5, 6],
                                         copies_note=['note x', 'note 2'],
                                         copies_tags=[['tag1', 'tag2'], ['tag3', 'tag3']])
+        print_tit('Copies uptated:')
+        print_vert(x10.copies_id)
         x9.execute()
-        print('\nCopies found:')
+        print_tit('Copies found after update:')
         print(x9.df)
 
         x11 = ITADDeleteCopies(copies_id=x9.copies_id)
-        print('\nDeleted copies with ID:')
-        printv(x11.copies_id)
+        print_tit('Deleted copies with ID:')
+        print_vert(x11.copies_id)
         x9.execute()
-        print('\nCopies found:')
+        print_tit('Copies found after deletion:')
         print(x9.df)
+
+        x8.execute()
+        print_tit(f'Removed {len(x8.games_id)} games from collection:')
+        print_vert(x8.games_id)
 
     # ==================== CATERORIES ====================
     if debug_parts['categories']:
         x13 = ITADGetCategories()
-        print('\nAll categories:')
+        print_tit('All categories:')
         print(x13.df)
 
-        x14 = ITADCreateNewCategory(category_title=f'Cat {datetime.now()}',
-                                    category_public=False)
-        print('\nAdded a new category:')
-        print(f'ID={x14.created_category_id}')
-        print(f'Title={x14.created_category_title}')
-        print(f'Public={x14.created_category_public}')
+        x14a = ITADCreateNewCategory(category_title='New cat 1',
+                                     category_public=False)
+        print_tit('Added a new category 1:')
+        print(DataFrame({'ID': [x14a.created_category_id],
+                         'Title': [x14a.created_category_title],
+                         'Public': [x14a.created_category_public]}))
 
-        x15 = ITADUpdateCategories(categories_upd_id=[15199,
-                                                      15200,
-                                                      15201],
-                                   categories_upd_title=[f'Test cat. {datetime.now()}',
-                                                         f'Test cat. {datetime.now()}',
-                                                         f'Test cat. {datetime.now()}'],
+        x14b = ITADCreateNewCategory(category_title='New cat 2',
+                                     category_public=False)
+        print_tit('Added a new category 2:')
+        print(DataFrame({'ID': [x14b.created_category_id],
+                         'Title': [x14b.created_category_title],
+                         'Public': [x14b.created_category_public]}))
+
+        print_tit('All categories after additions:')
+        x13.execute()
+        print(x13.df)
+
+        x15 = ITADUpdateCategories(categories_upd_id=[x14a.created_category_id,
+                                                      x14b.created_category_id],
+                                   categories_upd_title=['Updated cat 1',
+                                                         'Updated cat 2'],
                                    categories_upd_public=[False,
-                                                          False,
                                                           False],
                                    categories_upd_position=[91,
-                                                            91,
-                                                            93])
-        print('\nUpdated categories:')
+                                                            92])
+        print_tit('Updated categories:')
         print(DataFrame({'ID': x15.categories_upd_id,
                          'Title': x15.categories_upd_title,
                          'Public': x15.categories_upd_public,
                          'Position': x15.categories_upd_position}))
-        print('\nAll categories:')
+        print_tit('All categories afte update (response):')
         print(x15.df)
 
-        x16 = ITADDeleteCategories([x14.created_category_id])
-        print('\nDeleted categories:')
-        printv(x16.categories_del_id)
-        print('\nAll categories:')
-        print(x15.df)
+        x16 = ITADDeleteCategories([x14a.created_category_id,
+                                    x14b.created_category_id])
+        print_tit('Deleted categories:')
+        print_vert(x16.categories_del_id)
+        print_tit('All categories after deletion:')
+        x13.execute()
+        print(x13.df)
 
     # ==================== USER ====================
     if debug_parts['user']:
         x17 = ITADGetUserInfo()
+        print_tit('Get user name:')
         print(x17.username)
 
         x18 = ITADGetUserNotes()
-        print(x18.df)
+        print_tit('Get user notes, showing 0-10:')
+        print(x18.df[0:10])
 
-        x19 = ITADPutUserNotesToGame(games_id=['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                               '018d937f-5233-732a-9727-ab9b4d72c304'],
-                                     games_note=['bb',
-                                                 'cc'])
+        x19 = ITADPutUserNotesToGame(games_id=[game_id1, game_id2],
+                                     games_note=['bb', 'cc'])
+        print_tit('Add user notes to game:')
+        print(DataFrame({'Game ID': x19.games_id,
+                         'Title': get_games_title(x19.games_id),
+                         'Note': x19.games_note}
+                        ))
 
-        x20 = ITADDelUserNotesFromGame(['018d937f-3a3b-7210-bd2d-0d1dfb1d84c0',
-                                        '018d937f-5233-732a-9727-ab9b4d72c304'])
+        x20 = ITADDelUserNotesFromGame([game_id1, game_id2])
+        print_tit('Delete user notes from games:')
+        print(DataFrame({'Game ID': x20.games_id,
+                         'Game Title': get_games_title(x20.games_id)
+                         }))
 
-    pass
+    print_tit('Done')
