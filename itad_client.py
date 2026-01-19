@@ -53,11 +53,7 @@ import print_color
 # Local application/library specific imports
 import private_data
 
-
-# Application data
-API_KEY = private_data.API_KEY
-CLIENT_ID = private_data.CLIENT_ID
-CLIENT_SECRET = private_data.CLIENT_SECRET
+# Constants
 REDIRECT_URI = 'https://localhost'
 SCOPE = [
     'user_info',
@@ -78,195 +74,220 @@ MSG_PARAM_NONE = 'Parameter is None'
 MSG_PARAM_EMPTY = 'Parameter is empty'
 
 
-def get_access_token():
-    # Create an OAuth2 Session
-    """
-    Get an access token to use with the ITAD API.
+# ==================== Base class ====================
+class ITADBaseClass:
+    @classmethod
+    def get_access_token(cls, api_key, client_id, client_secret):
+        # Create an OAuth2 Session
+        """
+        Get an access token to use with the ITAD API.
 
-    First, try to load existing tokens from a JSON file.
-    If the file does not exist, obtain new tokens using the PKCE flow.
-    Save the new tokens to the same JSON file.
-    If the tokens are valid, return the access token.
-    Otherwise, return None.
-    """
-    oauth_session = requests_oauthlib.OAuth2Session(client_id=CLIENT_ID,
-                                                    redirect_uri=REDIRECT_URI,
-                                                    scope=SCOPE,
-                                                    pkce='S256')
+        First, try to load existing tokens from a JSON file.
+        If the file does not exist, obtain new tokens using the PKCE flow.
+        Save the new tokens to the same JSON file.
+        If the tokens are valid, return the access token.
+        Otherwise, return None.
+        """
+        cls.api_key = api_key
+        cls.client_id = client_id
+        cls.client_secret = client_secret
+        cls.oauth_session = requests_oauthlib.OAuth2Session(client_id=cls.client_id,
+                                                            redirect_uri=REDIRECT_URI,
+                                                            scope=SCOPE,
+                                                            pkce='S256')
 
-    if os.path.exists(TOKEN_FILE):
-        oauth_session.token = load_json(TOKEN_FILE)
-        oauth_session.refresh_token(TOKEN_URL, auth=(CLIENT_ID, CLIENT_SECRET))
-        save_json(TOKEN_FILE, oauth_session.token)
-    else:
-        get_new_tokens_from_itad(oauth_session)
-        save_json(TOKEN_FILE, oauth_session.token)
-        print_ok(f'Created new tokens to file ({TOKEN_FILE})')
-    if test_oauth_session(oauth_session):
-        return oauth_session.token['access_token']
-    else:
-        return None
-
-
-def save_json(filename, data):
-    try:
-        with open(filename, 'w') as f:
-            json.dump(data, f, indent=4, check_circular=True)
-    except Exception as e:
-        print_err('Error saving JSON file:', e)
-
-
-def load_json(filename):
-    try:
-        with open(filename, 'r') as f:
-            return json.load(f)
-    except Exception as e:
-        print_err('Error loading JSON file:', e)
-        return None
-
-
-def get_new_tokens_from_itad(oauth_session):
-    """
-    Obtain new tokens from ITAD using the PKCE flow.
-
-    This function will open a browser window for the user to authorize access
-    to the ITAD API. After authorization, it will fetch the access token and
-    save it to a local JSON file.
-
-    Parameters
-    ----------
-    oauth_session : requests_oauthlib.OAuth2Session
-        An OAuth2 session with the client ID, redirect URI and scope.
-
-    Returns
-    -------
-    None
-    """
-
-    # Step 1: obtain authorization URL
-    authorization_url, state = oauth_session.authorization_url(AUTH_URL)
-
-    # Step 2: open URL in browser, ask user to authorize and copy redirect URL
-    print('Please go to this URL and authorize access:')
-    print(authorization_url)
-    webbrowser.open(authorization_url)
-
-    # Step 3: Get the authorization verifier code from the callback url
-    redirect_URL = input('\nPaste the full redirect URL here: ')
-
-    # Step 4: Fetch the access token
-    oauth_session.fetch_token(TOKEN_URL, authorization_response=redirect_URL)
-
-    print('Tokens expires in ',
-          oauth_session.token['expires_in']/3600/24, ' days')
-    print('Tokens expires at ',
-          datetime.datetime.fromtimestamp(oauth_session.token['expires_at']))
-
-
-def test_oauth_session(oauth_session):
-    ok = oauth_session.get(BASE_URL + 'user/info/v2').status_code == 200
-    if ok:
-        print_ok('OAuth is working')
-    else:
-        print_err('OAuth is not working')
-    return ok
-
-
-def send_request(method, endpoint, security, params={}, header={}, body={}):
-    """
-    Send a request to the ITAD API.
-
-    Parameters
-    ----------
-    method : str
-        The HTTP method to use. Valid values are 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'.
-    endpoint : str
-        The API endpoint to use. If it contains the full HTTP address, raise a ValueError.
-    security : str
-        The security type to use. Valid values are 'key' or 'oa2'.
-    params : dict, optional
-        The query parameters to use.
-    header : dict, optional
-        The headers to use.
-    body : dict, optional
-        The JSON body data to send.
-
-    Returns
-    -------
-    status_code : int
-        The HTTP status code of the response.
-    response : dict
-        The JSON data of the response. If the response was empty, return None.
-    """
-
-    # prepare data
-    header['Content-Type'] = 'application/json'
-
-    if security == 'key':
-        params['key'] = API_KEY
-    elif security == 'oa2':
-        header['Authorization'] = 'Bearer ' + access_token
-    else:
-        raise ValueError('Invalid security type: valid ''key'' or ''oa2'' ')
-        return 0, None
-
-    if endpoint.startswith('http') or endpoint == "":
-        raise ValueError('Endpoint contains full HTTP addres?')
-        return 0, None
-    else:
-        url = BASE_URL + endpoint
-
-    # make request
-    if (method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']):
-        resp = requests.request(method=method,
-                                url=url,
-                                headers=header,
-                                params=params,
-                                json=body)
-        if resp.status_code >= 400:
-            # handle request error
-            print_err(
-                f'HTTP error code({resp.status_code}): {resp.reason}. {resp.json()['reason_phrase']}')
-            if 'details' in resp.json():
-                print_err(f'\tDetails: {resp.json()['details']}')
-            return resp.status_code, None
-        elif resp.content == b'':
-            # request ok with empty response
-            return resp.status_code, None
+        if os.path.exists(TOKEN_FILE):
+            cls.oauth_session.token = cls.load_json(TOKEN_FILE)
+            cls.oauth_session.refresh_token(token_url=TOKEN_URL,
+                                            auth=(cls.client_id, cls.client_secret))
+            cls.save_json(TOKEN_FILE, cls.oauth_session.token)
         else:
-            # request ok
-            return resp.status_code, resp.json()
-    else:
-        print_err('Invalid HTTP method')
-        return 0, None
+            cls.get_new_tokens_from_itad()
+            cls.save_json(TOKEN_FILE, cls.oauth_session.token)
+            print_ok(f'Created new tokens to file ({TOKEN_FILE})')
+
+        if cls.test_oauth_session():
+            cls.access_token = cls.oauth_session.token['access_token']
+        else:
+            cls.access_token = None
+
+    @classmethod
+    def get_new_tokens_from_itad(cls):
+
+        # Step 1: obtain authorization URL
+        auth_url, auth_state = cls.oauth_session.authorization_url(AUTH_URL)
+
+        # Step 2: open URL in browser, ask user to authorize and copy redirect URL
+        print('Please go to this URL and authorize access:')
+        print(auth_url)
+        webbrowser.open(auth_url)
+
+        # Step 3: Get the authorization verifier code from the callback url
+        redirect_URL = input('\nPaste the full redirect URL here: ')
+
+        # Step 4: Fetch the access token
+        cls.oauth_session.fetch_token(
+            TOKEN_URL, authorization_response=redirect_URL)
+
+        print('Tokens expires in ',
+              cls.oauth_session.token['expires_in']/3600/24, ' days')
+        print('Tokens expires at ',
+              datetime.fromtimestamp(cls.oauth_session.token['expires_at']))
+
+    @classmethod
+    def test_oauth_session(cls):
+        ok = cls.oauth_session.get(
+            BASE_URL + 'user/info/v2').status_code == 200
+        if ok:
+            print_ok('OAuth is working')
+        else:
+            print_err('OAuth is not working')
+        return ok
+
+    @classmethod
+    def send_request(cls, method, endpoint, security, params={}, header={}, body={}):
+        """
+        Send a request to the ITAD API.
+
+        Parameters
+        ----------
+        method : str
+            The HTTP method to use. Valid values are 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'.
+        endpoint : str
+            The API endpoint to use. If it contains the full HTTP address, raise a ValueError.
+        security : str
+            The security type to use. Valid values are 'key' or 'oa2'.
+        params : dict, optional
+            The query parameters to use.
+        header : dict, optional
+            The headers to use.
+        body : dict, optional
+            The JSON body data to send.
+
+        Returns
+        -------
+        status_code : int
+            The HTTP status code of the response.
+        response : dict
+            The JSON data of the response. If the response was empty, return None.
+        """
+
+        # prepare data
+        header['Content-Type'] = 'application/json'
+
+        if security == 'key':
+            params['key'] = cls.api_key
+        elif security == 'oa2':
+            header['Authorization'] = 'Bearer ' + cls.access_token
+        else:
+            raise ValueError(
+                'Invalid security type: valid ''key'' or ''oa2'' ')
+            return 0, None
+
+        if endpoint.startswith('http') or endpoint == "":
+            raise ValueError('Endpoint contains full HTTP addres?')
+            return 0, None
+        else:
+            url = BASE_URL + endpoint
+
+        # make request
+        if (method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']):
+            resp = requests.request(method=method,
+                                    url=url,
+                                    headers=header,
+                                    params=params,
+                                    json=body)
+            if resp.status_code >= 400:
+                # handle request error
+                print_err(
+                    f'HTTP error code({resp.status_code}): {resp.reason}. {resp.json()['reason_phrase']}')
+                if 'details' in resp.json():
+                    print_err(f'\tDetails: {resp.json()['details']}')
+                return resp.status_code, None
+            elif resp.content == b'':
+                # request ok with empty response
+                return resp.status_code, None
+            else:
+                # request ok
+                return resp.status_code, resp.json()
+        else:
+            print_err('Invalid HTTP method')
+            return 0, None
+
+    @classmethod
+    def get_games_title(cls, games_id):
+        assert games_id is not None, MSG_PARAM_NONE
+        assert type(games_id) is list
+        titles = []
+        for gid in games_id:
+            # make request
+            resp_code, resp = cls.send_request(method='GET',
+                                               endpoint='games/info/v2',
+                                               security='key',
+                                               params={'id': gid},
+                                               header={},
+                                               body={}
+                                               )
+            # process response data
+            if resp_code == 200:
+                titles.append(resp['title'])
+            else:
+                titles.append(None)
+        return titles
+
+    @classmethod
+    def get_game_title(cls, game_id):
+        # make request
+        resp_code, resp = cls.send_request(method='GET',
+                                           endpoint='games/info/v2',
+                                           security='key',
+                                           params={'id': game_id},
+                                           header={},
+                                           body={}
+                                           )
+        # process response data
+        if resp_code == 200:
+            return resp['title']
+        else:
+            return None
+
+    @staticmethod
+    def get_game_url(game_id, redirect=False):
+        if redirect:
+            # gets redirected address, takes longer
+            return requests.get(f'https://isthereanydeal.com/game/id:{game_id}/').url
+        else:
+            return f'https://isthereanydeal.com/game/id:{game_id}/info/'
+
+    @staticmethod
+    def get_games_url(games_id, redirect=False):
+        if redirect:
+            # gets redirected addresses, takes longer
+            return [requests.get(f'https://isthereanydeal.com/game/id:{game_id}/').url for game_id in games_id]
+        else:
+            return [f'https://isthereanydeal.com/game/id:{game_id}/info/' for game_id in games_id]
+
+    @staticmethod
+    def save_json(filename, data):
+        try:
+            with open(filename, 'w') as f:
+                json.dump(data, f, indent=4, check_circular=True)
+        except Exception as e:
+            print_err('Error saving JSON file:', e)
+
+    @staticmethod
+    def load_json(filename):
+        try:
+            with open(filename, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print_err('Error loading JSON file:', e)
+            return None
 
 
-def len_opt_arg(x, n):
-    return x is None or len(x) == n
+# ==================== Derived Classes ====================
 
-
-def len_oblig_arg(x, n):
-    return len(x) == n
-
-
-def print_vert(x):
-    print(*x, sep='\n')
-
-
-def print_tit(x):
-    print('')
-    print_color.print(x, color='blue')
-
-
-def print_err(x):
-    print_color.print(x, color='red')
-
-
-def print_ok(x):
-    print_color.print(x, color='green')
-
-
-class ITADSearchGames:
+class ITADSearchGames(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Lookup/operation/games-search-v1
     # https://docs.isthereanydeal.com/#tag/Game/operation/games-search-v1
 
@@ -282,14 +303,14 @@ class ITADSearchGames:
         assert self.game_title_to_search is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = send_request(method='GET',
-                                                 endpoint='games/search/v1',
-                                                 security='key',
-                                                 params={'title': self.game_title_to_search,
-                                                         'results': self.max_results},
-                                                 header={},
-                                                 body={}
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='GET',
+                                                      endpoint='games/search/v1',
+                                                      security='key',
+                                                      params={'title': self.game_title_to_search,
+                                                              'results': self.max_results},
+                                                      header={},
+                                                      body={}
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -312,7 +333,7 @@ class ITADSearchGames:
                 self.found_games_number = 0
 
 
-class ITADGetGameInfo:
+class ITADGetGameInfo(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Game/operation/games-info-v2
 
     def __init__(self,
@@ -325,13 +346,14 @@ class ITADGetGameInfo:
         assert self.game_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = send_request(method='GET',
-                                                 endpoint='games/info/v2',
-                                                 security='key',
-                                                 params={'id': self.game_id},
-                                                 header={},
-                                                 body={}
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='GET',
+                                                      endpoint='games/info/v2',
+                                                      security='key',
+                                                      params={
+                                                          'id': self.game_id},
+                                                      header={},
+                                                      body={}
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -345,60 +367,7 @@ class ITADGetGameInfo:
             self.game_urls = self.resp['urls']
 
 
-def get_games_title(games_id):
-    assert games_id is not None, MSG_PARAM_NONE
-    assert type(games_id) is list
-    titles = []
-    for gid in games_id:
-        # make request
-        resp_code, resp = send_request(method='GET',
-                                       endpoint='games/info/v2',
-                                       security='key',
-                                       params={'id': gid},
-                                       header={},
-                                       body={}
-                                       )
-        # process response data
-        if resp_code == 200:
-            titles.append(resp['title'])
-        else:
-            titles.append(None)
-    return titles
-
-
-def get_game_title(game_id):
-    # make request
-    resp_code, resp = send_request(method='GET',
-                                   endpoint='games/info/v2',
-                                   security='key',
-                                   params={'id': game_id},
-                                   header={},
-                                   body={}
-                                   )
-    # process response data
-    if resp_code == 200:
-        return resp['title']
-    else:
-        return None
-
-
-def get_game_url(game_id, redirect=False):
-    if redirect:
-        # gets redirected address, takes longer
-        return requests.get(f'https://isthereanydeal.com/game/id:{game_id}/').url
-    else:
-        return f'https://isthereanydeal.com/game/id:{game_id}/info/'
-
-
-def get_games_url(games_id, redirect=False):
-    if redirect:
-        # gets redirected addresses, takes longer
-        return [requests.get(f'https://isthereanydeal.com/game/id:{game_id}/').url for game_id in games_id]
-    else:
-        return [f'https://isthereanydeal.com/game/id:{game_id}/info/' for game_id in games_id]
-
-
-class ITADGetGamesFromWaitlist:
+class ITADGetGamesFromWaitlist(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-get
 
     def __init__(self):
@@ -406,13 +375,13 @@ class ITADGetGamesFromWaitlist:
 
     def execute(self):
         # make request
-        self.resp_code, self.resp = send_request(method='GET',
-                                                 endpoint='waitlist/games/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body={}
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='GET',
+                                                      endpoint='waitlist/games/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body={}
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -435,7 +404,7 @@ class ITADGetGamesFromWaitlist:
                 self.waitlist_games_number = 0
 
 
-class ITADPutGamesIntoWaitlist:
+class ITADPutGamesIntoWaitlist(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-put
 
     def __init__(self,
@@ -449,16 +418,16 @@ class ITADPutGamesIntoWaitlist:
         assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = send_request(method='PUT',
-                                                 endpoint='waitlist/games/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=self.games_id
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='PUT',
+                                                      endpoint='waitlist/games/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=self.games_id
+                                                      )
 
 
-class ITADDelGamesFromWaitlist:
+class ITADDelGamesFromWaitlist(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-delete
 
     def __init__(self,
@@ -472,16 +441,16 @@ class ITADDelGamesFromWaitlist:
         assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = send_request(method='DELETE',
-                                                 endpoint='waitlist/games/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=self.games_id
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='DELETE',
+                                                      endpoint='waitlist/games/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=self.games_id
+                                                      )
 
 
-class ITADGetGamesFromCollection:
+class ITADGetGamesFromCollection(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-get
 
     def __init__(self):
@@ -489,13 +458,13 @@ class ITADGetGamesFromCollection:
 
     def execute(self):
         # make request
-        self.resp_code, self.resp = send_request(method='GET',
-                                                 endpoint='collection/games/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body={}
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='GET',
+                                                      endpoint='collection/games/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body={}
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -518,7 +487,7 @@ class ITADGetGamesFromCollection:
                 self.collection_games_number = 0
 
 
-class ITADPutGamesIntoCollection:
+class ITADPutGamesIntoCollection(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-put
 
     def __init__(self,
@@ -532,16 +501,16 @@ class ITADPutGamesIntoCollection:
         assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = send_request(method='PUT',
-                                                 endpoint='collection/games/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=self.games_id
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='PUT',
+                                                      endpoint='collection/games/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=self.games_id
+                                                      )
 
 
-class ITADDelGamesFromCollection:
+class ITADDelGamesFromCollection(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-delete
 
     def __init__(self,
@@ -555,16 +524,16 @@ class ITADDelGamesFromCollection:
         assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = send_request(method='DELETE',
-                                                 endpoint='collection/games/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=self.games_id
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='DELETE',
+                                                      endpoint='collection/games/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=self.games_id
+                                                      )
 
 
-class ITADGetCopiesOfGames:
+class ITADGetCopiesOfGames(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-get
     # Description is wrong, it requieres Game IDs
 
@@ -579,13 +548,13 @@ class ITADGetCopiesOfGames:
         assert self.games_id_to_search is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = send_request(method='GET',
-                                                 endpoint='collection/copies/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=self.games_id_to_search
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='GET',
+                                                      endpoint='collection/copies/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=self.games_id_to_search
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -625,7 +594,7 @@ class ITADGetCopiesOfGames:
                 self.copies_number = 0
 
 
-class ITADAddCopiesToGames:
+class ITADAddCopiesToGames(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-post
     # will also add games to collection if no already there
 
@@ -664,24 +633,22 @@ class ITADAddCopiesToGames:
                 'amount': price, 'currency':  'EUR'} for price in self.copies_price_eur]
 
         # make request
-        self.resp_code, self.resp = send_request(method='POST',
-                                                 endpoint='collection/copies/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=DataFrame({'gameId': self.copies_game_id,
-                                                                 'redeemed':  self.copies_redeemed,
-                                                                 'shop': self.copies_shop_id,
-                                                                 'price': self.copies_prices,
-                                                                 'note':  self.copies_note,
-                                                                 'tags':  self.copies_tags}
-                                                                ).to_dict(orient='records')
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='POST',
+                                                      endpoint='collection/copies/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=DataFrame({'gameId': self.copies_game_id,
+                                                                      'redeemed':  self.copies_redeemed,
+                                                                      'shop': self.copies_shop_id,
+                                                                      'price': self.copies_prices,
+                                                                      'note':  self.copies_note,
+                                                                      'tags':  self.copies_tags}
+                                                                     ).to_dict(orient='records')
+                                                      )
 
 
-# ===============================================================================================
-
-class ITADUpdateCopiesFromGames:
+class ITADUpdateCopiesFromGames(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-patch
 
     def __init__(self,
@@ -718,22 +685,22 @@ class ITADUpdateCopiesFromGames:
                 'amount': price, 'currency':  'EUR'} for price in self.copies_price_eur]
 
         # make request
-        self.resp_code, self.resp = send_request(method='PATCH',
-                                                 endpoint='collection/copies/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=DataFrame({'id': self.copies_id,
-                                                                 'redeemed': self.copies_redeemed,
-                                                                 'shop': self.copies_shop_id,
-                                                                 'price': self.copies_prices,
-                                                                 'note': self.copies_note,
-                                                                 'tags': self.copies_tags}
-                                                                ).to_dict(orient='records')
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='PATCH',
+                                                      endpoint='collection/copies/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=DataFrame({'id': self.copies_id,
+                                                                      'redeemed': self.copies_redeemed,
+                                                                      'shop': self.copies_shop_id,
+                                                                      'price': self.copies_prices,
+                                                                      'note': self.copies_note,
+                                                                      'tags': self.copies_tags}
+                                                                     ).to_dict(orient='records')
+                                                      )
 
 
-class ITADDeleteCopies:
+class ITADDeleteCopies(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-delete
 
     def __init__(self,
@@ -746,16 +713,16 @@ class ITADDeleteCopies:
         assert self.copies_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = send_request(method='DELETE',
-                                                 endpoint='collection/copies/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=self.copies_id
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='DELETE',
+                                                      endpoint='collection/copies/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=self.copies_id
+                                                      )
 
 
-class ITADGetCategories:
+class ITADGetCategories(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-get
 
     def __init__(self):
@@ -763,13 +730,13 @@ class ITADGetCategories:
 
     def execute(self):
         # make request
-        self.resp_code, self.resp = send_request(method='GET',
-                                                 endpoint='collection/groups/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body={}
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='GET',
+                                                      endpoint='collection/groups/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body={}
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -784,7 +751,7 @@ class ITADGetCategories:
                 self.categories_public = None
 
 
-class ITADCreateNewCategory:
+class ITADCreateNewCategory(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-post
 
     def __init__(self,
@@ -800,14 +767,14 @@ class ITADCreateNewCategory:
         assert self.category_public is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = send_request(method='POST',
-                                                 endpoint='collection/groups/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body={'title': self.category_title,
-                                                       'public': self.category_public}
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='POST',
+                                                      endpoint='collection/groups/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body={'title': self.category_title,
+                                                            'public': self.category_public}
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -816,7 +783,7 @@ class ITADCreateNewCategory:
             self.created_category_public = self.resp['public']
 
 
-class ITADUpdateCategories:
+class ITADUpdateCategories(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-patch
 
     def __init__(self,
@@ -843,17 +810,17 @@ class ITADUpdateCategories:
         # prepare data
 
         # make request
-        self.resp_code, self.resp = send_request(method='PATCH',
-                                                 endpoint='collection/groups/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=DataFrame({'id': self.categories_upd_id,
-                                                                 'title':  self.categories_upd_title,
-                                                                 'public':  self.categories_upd_public,
-                                                                 'position':  self.categories_upd_position}
-                                                                ).to_dict(orient='records')
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='PATCH',
+                                                      endpoint='collection/groups/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=DataFrame({'id': self.categories_upd_id,
+                                                                      'title':  self.categories_upd_title,
+                                                                      'public':  self.categories_upd_public,
+                                                                      'position':  self.categories_upd_position}
+                                                                     ).to_dict(orient='records')
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -868,7 +835,7 @@ class ITADUpdateCategories:
                 self.categories_public = None
 
 
-class ITADDeleteCategories:
+class ITADDeleteCategories(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-delete
 
     def __init__(self,
@@ -881,37 +848,38 @@ class ITADDeleteCategories:
         assert self.categories_del_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = send_request(method='DELETE',
-                                                 endpoint='collection/groups/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=self.categories_del_id
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='DELETE',
+                                                      endpoint='collection/groups/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=self.categories_del_id
+                                                      )
 
 
-class ITADGetUserInfo:
+class ITADGetUserInfo(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/User/operation/user-info-v2
 
     def __init__(self):
         self.execute()
 
     def execute(self):
+        pass
         # make request
-        self.resp_code, self.resp = send_request(method='GET',
-                                                 endpoint='user/info/v2',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body={}
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='GET',
+                                                      endpoint='user/info/v2',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body={}
+                                                      )
 
         # process response data
         if self.resp_code == 200:
             self.username = self.resp['username']
 
 
-class ITADGetUserNotes:
+class ITADGetUserNotes(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-get
 
     def __init__(self):
@@ -919,13 +887,13 @@ class ITADGetUserNotes:
 
     def execute(self):
         # make request
-        self.resp_code, self.resp = send_request(method='GET',
-                                                 endpoint='user/notes/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body={}
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='GET',
+                                                      endpoint='user/notes/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body={}
+                                                      )
 
         # process response data
         if self.resp_code == 200:
@@ -938,7 +906,7 @@ class ITADGetUserNotes:
                 self.found_notes = None
 
 
-class ITADPutUserNotesToGame:
+class ITADPutUserNotesToGame(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-put
 
     def __init__(self,
@@ -957,18 +925,18 @@ class ITADPutUserNotesToGame:
         assert len_oblig_arg(self.games_note, n), MSG_PARAM_WRONG_LEN
 
         # make request
-        self.resp_code, self.resp = send_request(method='PUT',
-                                                 endpoint='user/notes/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=DataFrame({'gid': self.games_id,
-                                                                 'note':  self.games_note}
-                                                                ).to_dict(orient='records')
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='PUT',
+                                                      endpoint='user/notes/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=DataFrame({'gid': self.games_id,
+                                                                      'note':  self.games_note}
+                                                                     ).to_dict(orient='records')
+                                                      )
 
 
-class ITADDelUserNotesFromGame:
+class ITADDelUserNotesFromGame(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-delete
 
     def __init__(self,
@@ -981,14 +949,43 @@ class ITADDelUserNotesFromGame:
         assert self.games_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = send_request(method='DELETE',
-                                                 endpoint='user/notes/v1',
-                                                 security='oa2',
-                                                 params={},
-                                                 header={},
-                                                 body=self.games_id
-                                                 )
+        self.resp_code, self.resp = self.send_request(method='DELETE',
+                                                      endpoint='user/notes/v1',
+                                                      security='oa2',
+                                                      params={},
+                                                      header={},
+                                                      body=self.games_id
+                                                      )
 
+
+# ==================== Auxiliary functions ====================
+
+def len_opt_arg(x, n):
+    return x is None or len(x) == n
+
+
+def len_oblig_arg(x, n):
+    return len(x) == n
+
+
+def print_vert(x):
+    print(*x, sep='\n')
+
+
+def print_tit(x):
+    print('')
+    print_color.print(x, color='blue')
+
+
+def print_err(x):
+    print_color.print(x, color='red')
+
+
+def print_ok(x):
+    print_color.print(x, color='green')
+
+
+# ==================== Main ====================
 
 if __name__ == '__main__':
 
@@ -997,17 +994,18 @@ if __name__ == '__main__':
     """
 
     # ==================== INITIAL SETTINGS ====================
+    print_tit('Start test')
 
     pandas.set_option('display.max_colwidth', None)
 
-    print_tit('Start test')
-
-    access_token = get_access_token()
+    ITADBaseClass.get_access_token(api_key=private_data.API_KEY,
+                                   client_id=private_data.CLIENT_ID,
+                                   client_secret=private_data.CLIENT_SECRET)
 
     # ==================== EXAMPLE GAMES ====================
     # Tip: use games you don't have in your collection or watlist to avoid modification of yor data
-    game_id1 = '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0'  # RDR2
-    game_id2 = '018d937f-5233-732a-9727-ab9b4d72c304'  # FF
+    game_id1 = '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0'  # Red Deat Redemption 2
+    game_id2 = '018d937f-5233-732a-9727-ab9b4d72c304'  # Final Fantasy
 
     debug_parts = {'game_info': True,
                    'waitlist': True,
@@ -1032,14 +1030,14 @@ if __name__ == '__main__':
 
         ids = [game_id1,
                game_id2]
-        titles = get_games_title(games_id=ids)
-        urls = get_games_url(games_id=ids)
+        titles = ITADBaseClass.get_games_title(games_id=ids)
+        urls = ITADBaseClass.get_games_url(games_id=ids)
         print_tit('Get titles and URLs for various Game IDs')
         print(DataFrame({'ID': ids, 'titles': titles, 'urls': urls}))
 
         id = game_id1
-        title = get_game_title(game_id=id)
-        url = get_game_url(game_id=id)
+        title = ITADBaseClass.get_game_title(game_id=id)
+        url = ITADBaseClass.get_game_url(game_id=id)
         print_tit('Get title and URL for one Game ID')
         print(DataFrame({'ID': [id], 'title': [title], 'urls': [url]}))
 
@@ -1186,14 +1184,14 @@ if __name__ == '__main__':
                                      games_note=['bb', 'cc'])
         print_tit('Add user notes to game:')
         print(DataFrame({'Game ID': x19.games_id,
-                         'Title': get_games_title(x19.games_id),
+                         'Title': ITADBaseClass.get_games_title(x19.games_id),
                          'Note': x19.games_note}
                         ))
 
         x20 = ITADDelUserNotesFromGame([game_id1, game_id2])
         print_tit('Delete user notes from games:')
         print(DataFrame({'Game ID': x20.games_id,
-                         'Game Title': get_games_title(x20.games_id)
+                         'Game Title': ITADBaseClass.get_games_title(x20.games_id)
                          }))
 
     print_tit('Done')
