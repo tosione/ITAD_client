@@ -1,6 +1,4 @@
 """
-itad_client.py
-
 IsThereAnyDeal (ITAD) API client using OAuth2 and API Key.
 
 This module provides a client for interacting with the IsThereAnyDeal
@@ -9,29 +7,56 @@ key authentication for non-personal data.
 
 The client allows you to perform various operations such as retrieving
 user information, searching for games, managing collections, managing
-waitlists, and more.It provides high-level functions for making API
+waitlists, and more. It provides high-level functions for making API
 requests and handling authentication.
 
-The client uses the `requests_oauthlib` library for OAuth2
-authentication and the `requests` library for making HTTP requests.
-It also uses the `print_color` library for printing colored output.
+Classes:
+    ITADBaseClass: Base class for all ITAD client classes.
+        - get_access_token: loads from JSON or obtains new tokens.
+        - get_new_tokens_from_itad: obtains new tokens.
+        - test_oauth_session: tests the OAuth2 session.
+        - send_request: sends data a request to ITAD.
+        - get_games_title: retrieves the titles of multiple games.
+        - get_game_title: retrieves the title of a single game.
+        - get_game_url: gets the URL of a game.
+        - get_games_url: gets the URLs of multiple games.
+        - save_json: Saves JSON data to a file.
+        - load_json: Loads JSON data from a file.
+    ITADSearchGames
+    ITADGetGameInfo
+    ITADGetGamesFromWaitlist
+    ITADPutGamesIntoWaitlist
+    ITADDeleteGamesFromWaitlist
+    ITADGetGamesFromCollection
+    ITADPutGamesIntoCollection
+    ITADDelGamesFromCollection
+    ITADGetCopiesOfGames
+    ITADAddCopiesToGames
+    ITADUpdateCopiesOfGames
+    ITADDeleteCopiesOfGames
+    ITADGetCategories
+    ITADCreateNewCategory
+    ITADUpdateCategories
+    ITADDeleteCategories
+    ITADGetUserInfo
+    ITADGetUserNotes
+    ITADPutUserNotesFromGame
+    ITADDeleteUserNotesFromGame
+    ITADGetShopsInfo
 
-The client requires the following environment variables to be set:
-- `API_KEY`: The API key for authentication.
-- `CLIENT_ID`: The client ID for OAuth2 authentication.
-- `CLIENT_SECRET`: The client secret for OAuth2 authentication.
-- `REDIRECT_URI`: The redirect URI for OAuth2 authentication.
-- `SCOPE`: The scope of the API access.
+This module uses the `requests_oauthlib` library for OAuth2 authentication
+and the `print_color` library for colored printing.
+
 For privacy reasons, the API_KEY, CLIENT_ID, and CLIENT_SECRET are
 stored in the `private_data.py` module. User must generate its own
-`private_data.py` with this constants.
+`private_data.py` were this constants must be defined.
 
 For more information on the ITAD API, refer to the official
 documentation: https://docs.isthereanydeal.com/
 
 Author: tosione
-Date: 2026-01-03
-Version: 0.1
+Date: 2026-01-19
+Version: 1.0
 """
 
 __version__ = '0.1'
@@ -427,7 +452,7 @@ class ITADPutGamesIntoWaitlist(ITADBaseClass):
                           )
 
 
-class ITADDelGamesFromWaitlist(ITADBaseClass):
+class ITADDeleteGamesFromWaitlist(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-delete
 
     def __init__(self,
@@ -510,7 +535,7 @@ class ITADPutGamesIntoCollection(ITADBaseClass):
                           )
 
 
-class ITADDelGamesFromCollection(ITADBaseClass):
+class ITADDeleteGamesFromCollection(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-delete
 
     def __init__(self,
@@ -936,7 +961,7 @@ class ITADPutUserNotesToGame(ITADBaseClass):
                           )
 
 
-class ITADDelUserNotesFromGame(ITADBaseClass):
+class ITADDeleteUserNotesFromGame(ITADBaseClass):
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-delete
 
     def __init__(self,
@@ -1100,7 +1125,7 @@ if __name__ == '__main__':
         x3.execute()
         print_tit(f'{x3.waitlist_games_number} games in Wailist')
 
-        x5 = ITADDelGamesFromWaitlist(games_id=[game_id1, game_id2])
+        x5 = ITADDeleteGamesFromWaitlist(games_id=[game_id1, game_id2])
         print_tit(f'Removed {len(x5.games_id)} games from waitlist:')
         print_vert(x5.games_id)
         x3.execute()
@@ -1121,7 +1146,7 @@ if __name__ == '__main__':
         x6.execute()
         print_tit(f'{x6.collection_games_number} games in collection')
 
-        x8 = ITADDelGamesFromCollection(games_id=[game_id1, game_id2])
+        x8 = ITADDeleteGamesFromCollection(games_id=[game_id1, game_id2])
         print_tit(f'Removed {len(x8.games_id)} games from collection:')
         print_vert(x8.games_id)
         x6.execute()
@@ -1241,7 +1266,7 @@ if __name__ == '__main__':
                          'Note': x19.games_note}
                         ))
 
-        x20 = ITADDelUserNotesFromGame([game_id1, game_id2])
+        x20 = ITADDeleteUserNotesFromGame([game_id1, game_id2])
         print_tit('Delete user notes from games:')
         print(DataFrame({'Game ID': x20.games_id,
                          'Game Title': ITADBaseClass.get_games_title(x20.games_id)
