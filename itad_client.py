@@ -11,7 +11,7 @@ waitlists, and more. It provides high-level functions for making API
 requests and handling authentication.
 
 Classes:
-    ITADBaseClass: Base class for all ITAD client classes.
+    BaseClass: Base class for all ITAD client classes.
         - get_access_token: loads from JSON or obtains new tokens.
         - get_new_tokens_from_itad: obtains new tokens.
         - test_oauth_session: tests the OAuth2 session.
@@ -22,27 +22,27 @@ Classes:
         - get_games_url: gets the URLs of multiple games.
         - save_json: Saves JSON data to a file.
         - load_json: Loads JSON data from a file.
-    ITADSearchGames
-    ITADGetGameInfo
-    ITADGetGamesFromWaitlist
-    ITADPutGamesIntoWaitlist
-    ITADDeleteGamesFromWaitlist
-    ITADGetGamesFromCollection
-    ITADPutGamesIntoCollection
-    ITADDelGamesFromCollection
-    ITADGetCopiesOfGames
-    ITADAddCopiesToGames
-    ITADUpdateCopiesOfGames
-    ITADDeleteCopiesOfGames
-    ITADGetCategories
-    ITADCreateNewCategory
-    ITADUpdateCategories
-    ITADDeleteCategories
-    ITADGetUserInfo
-    ITADGetUserNotes
-    ITADPutUserNotesFromGame
-    ITADDeleteUserNotesFromGame
-    ITADGetShopsInfo
+    SearchGames
+    GetGameInfo
+    GetGamesFromWaitlist
+    PutGamesIntoWaitlist
+    DeleteGamesFromWaitlist
+    GetGamesFromCollection
+    PutGamesIntoCollection
+    DelGamesFromCollection
+    GetCopiesOfGames
+    AddCopiesToGames
+    UpdateCopiesOfGames
+    DeleteCopiesOfGames
+    GetCategories
+    CreateNewCategory
+    UpdateCategories
+    DeleteCategories
+    GetUserInfo
+    GetUserNotes
+    PutUserNotesFromGame
+    DeleteUserNotesFromGame
+    GetShopsInfo
 
 This module uses the `requests_oauthlib` library for OAuth2 authentication
 and the `print_color` library for colored printing.
@@ -98,7 +98,7 @@ MSG_PARAM_EMPTY = 'Parameter is empty'
 
 
 # ==================== Base class ====================
-class ITADBaseClass:
+class BaseClass:
     @classmethod
     def get_access_token(cls, api_key, client_id, client_secret):
         # Create an OAuth2 Session
@@ -310,7 +310,7 @@ class ITADBaseClass:
 
 # ==================== Derived Classes ====================
 
-class ITADSearchGames(ITADBaseClass):
+class SearchGames(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Lookup/operation/games-search-v1
     # https://docs.isthereanydeal.com/#tag/Game/operation/games-search-v1
 
@@ -356,7 +356,7 @@ class ITADSearchGames(ITADBaseClass):
                 self.found_games_number = 0
 
 
-class ITADGetGameInfo(ITADBaseClass):
+class GetGameInfo(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Game/operation/games-info-v2
 
     def __init__(self,
@@ -390,7 +390,7 @@ class ITADGetGameInfo(ITADBaseClass):
             self.game_urls = self.resp['urls']
 
 
-class ITADGetGamesFromWaitlist(ITADBaseClass):
+class GetGamesFromWaitlist(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-get
 
     def __init__(self):
@@ -427,7 +427,7 @@ class ITADGetGamesFromWaitlist(ITADBaseClass):
                 self.waitlist_games_number = 0
 
 
-class ITADPutGamesIntoWaitlist(ITADBaseClass):
+class PutGamesIntoWaitlist(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-put
 
     def __init__(self,
@@ -450,7 +450,7 @@ class ITADPutGamesIntoWaitlist(ITADBaseClass):
                           )
 
 
-class ITADDeleteGamesFromWaitlist(ITADBaseClass):
+class DeleteGamesFromWaitlist(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-delete
 
     def __init__(self,
@@ -473,7 +473,7 @@ class ITADDeleteGamesFromWaitlist(ITADBaseClass):
                           )
 
 
-class ITADGetGamesFromCollection(ITADBaseClass):
+class GetGamesFromCollection(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-get
 
     def __init__(self):
@@ -510,7 +510,7 @@ class ITADGetGamesFromCollection(ITADBaseClass):
                 self.collection_games_number = 0
 
 
-class ITADPutGamesIntoCollection(ITADBaseClass):
+class PutGamesIntoCollection(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-put
 
     def __init__(self,
@@ -533,7 +533,7 @@ class ITADPutGamesIntoCollection(ITADBaseClass):
                           )
 
 
-class ITADDeleteGamesFromCollection(ITADBaseClass):
+class DeleteGamesFromCollection(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Games/operation/collection-games-v1-delete
 
     def __init__(self,
@@ -556,7 +556,7 @@ class ITADDeleteGamesFromCollection(ITADBaseClass):
                           )
 
 
-class ITADGetCopiesOfGames(ITADBaseClass):
+class GetCopiesOfGames(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-get
     # Description is wrong, it requieres Game IDs
 
@@ -617,7 +617,7 @@ class ITADGetCopiesOfGames(ITADBaseClass):
                 self.copies_number = 0
 
 
-class ITADAddCopiesToGames(ITADBaseClass):
+class AddCopiesToGames(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-post
     # will also add games to collection if no already there
 
@@ -671,7 +671,7 @@ class ITADAddCopiesToGames(ITADBaseClass):
                           )
 
 
-class ITADUpdateCopiesFromGames(ITADBaseClass):
+class UpdateCopiesFromGames(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-patch
 
     def __init__(self,
@@ -723,7 +723,7 @@ class ITADUpdateCopiesFromGames(ITADBaseClass):
                           )
 
 
-class ITADDeleteCopies(ITADBaseClass):
+class DeleteCopies(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-delete
 
     def __init__(self,
@@ -745,7 +745,7 @@ class ITADDeleteCopies(ITADBaseClass):
                           )
 
 
-class ITADGetCategories(ITADBaseClass):
+class GetCategories(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-get
 
     def __init__(self):
@@ -774,7 +774,7 @@ class ITADGetCategories(ITADBaseClass):
                 self.categories_public = None
 
 
-class ITADCreateNewCategory(ITADBaseClass):
+class CreateNewCategory(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-post
 
     def __init__(self,
@@ -806,7 +806,7 @@ class ITADCreateNewCategory(ITADBaseClass):
             self.created_category_public = self.resp['public']
 
 
-class ITADUpdateCategories(ITADBaseClass):
+class UpdateCategories(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-patch
 
     def __init__(self,
@@ -858,7 +858,7 @@ class ITADUpdateCategories(ITADBaseClass):
                 self.categories_public = None
 
 
-class ITADDeleteCategories(ITADBaseClass):
+class DeleteCategories(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Groups/operation/collection-groups-v1-delete
 
     def __init__(self,
@@ -880,7 +880,7 @@ class ITADDeleteCategories(ITADBaseClass):
                           )
 
 
-class ITADGetUserInfo(ITADBaseClass):
+class GetUserInfo(BaseClass):
     # https://docs.isthereanydeal.com/#tag/User/operation/user-info-v2
 
     def __init__(self):
@@ -902,7 +902,7 @@ class ITADGetUserInfo(ITADBaseClass):
             self.username = self.resp['username']
 
 
-class ITADGetUserNotes(ITADBaseClass):
+class GetUserNotes(BaseClass):
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-get
 
     def __init__(self):
@@ -929,7 +929,7 @@ class ITADGetUserNotes(ITADBaseClass):
                 self.found_notes = None
 
 
-class ITADPutUserNotesToGame(ITADBaseClass):
+class PutUserNotesToGame(BaseClass):
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-put
 
     def __init__(self,
@@ -959,7 +959,7 @@ class ITADPutUserNotesToGame(ITADBaseClass):
                           )
 
 
-class ITADDeleteUserNotesFromGame(ITADBaseClass):
+class DeleteUserNotesFromGame(BaseClass):
     # https://docs.isthereanydeal.com/#tag/User-Notes/operation/user-notes-v1-delete
 
     def __init__(self,
@@ -981,7 +981,7 @@ class ITADDeleteUserNotesFromGame(ITADBaseClass):
                           )
 
 
-class ITADGetShopsInfo(ITADBaseClass):
+class GetShopsInfo(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Shops/operation/service-shops-v1
     def __init__(self, country_code):
         self.country_code = country_code
@@ -1063,9 +1063,9 @@ if __name__ == '__main__':
 
     pandas.set_option('display.max_colwidth', None)
 
-    ITADBaseClass.get_access_token(api_key=private_data.API_KEY,
-                                   client_id=private_data.CLIENT_ID,
-                                   client_secret=private_data.CLIENT_SECRET)
+    BaseClass.get_access_token(api_key=private_data.API_KEY,
+                               client_id=private_data.CLIENT_ID,
+                               client_secret=private_data.CLIENT_SECRET)
 
     # ==================== EXAMPLE GAMES ====================
     # Tip: use games you don't have in your collection or watlist to avoid modification of yor data
@@ -1085,26 +1085,26 @@ if __name__ == '__main__':
     if debug_parts['game_info']:
         print_sep()
 
-        x1 = ITADSearchGames(game_title_to_search='teken 8',
-                             max_results=999)
+        x1 = SearchGames(game_title_to_search='teken 8',
+                         max_results=999)
         print_tit(
             f'{x1.found_games_number} games found games for \'{x1.game_title_to_search}\', showing 10:')
         print_vert(x1.found_games_title[0:10])
 
-        x2 = ITADGetGameInfo(game_id=game_id1)
+        x2 = GetGameInfo(game_id=game_id1)
         print_tit(f'Get game info for Game ID: {x2.game_id}')
         print(x2.game_info)
 
         ids = [game_id1,
                game_id2]
-        titles = ITADBaseClass.get_games_title(games_id=ids)
-        urls = ITADBaseClass.get_games_url(games_id=ids)
+        titles = BaseClass.get_games_title(games_id=ids)
+        urls = BaseClass.get_games_url(games_id=ids)
         print_tit('Get titles and URLs for various Game IDs')
         print(DataFrame({'ID': ids, 'titles': titles, 'urls': urls}))
 
         id = game_id1
-        title = ITADBaseClass.get_game_title(game_id=id)
-        url = ITADBaseClass.get_game_url(game_id=id)
+        title = BaseClass.get_game_title(game_id=id)
+        url = BaseClass.get_game_url(game_id=id)
         print_tit('Get title and URL for one Game ID')
         print(DataFrame({'ID': [id], 'title': [title], 'urls': [url]}))
 
@@ -1112,18 +1112,18 @@ if __name__ == '__main__':
     if debug_parts['waitlist']:
         print_sep()
 
-        x3 = ITADGetGamesFromWaitlist()
+        x3 = GetGamesFromWaitlist()
         print_tit(f'{x3.waitlist_games_number} games in Wailist, showing 10:')
         print_vert(x3.waitlist_games_title[0:10])
 
-        x4 = ITADPutGamesIntoWaitlist(games_id=[game_id1, game_id2])
+        x4 = PutGamesIntoWaitlist(games_id=[game_id1, game_id2])
         print_tit(f'Added {len(x4.games_id)} games to waitlist:')
         print_vert(x4.games_id)
 
         x3.execute()
         print_tit(f'{x3.waitlist_games_number} games in Wailist')
 
-        x5 = ITADDeleteGamesFromWaitlist(games_id=[game_id1, game_id2])
+        x5 = DeleteGamesFromWaitlist(games_id=[game_id1, game_id2])
         print_tit(f'Removed {len(x5.games_id)} games from waitlist:')
         print_vert(x5.games_id)
         x3.execute()
@@ -1133,18 +1133,18 @@ if __name__ == '__main__':
     if debug_parts['collection']:
         print_sep()
 
-        x6 = ITADGetGamesFromCollection()
+        x6 = GetGamesFromCollection()
         print_tit(
             f'{x6.collection_games_number} games in collection, showing 10:')
         print_vert(x6.collection_games_title[0:10])
 
-        x7 = ITADPutGamesIntoCollection(games_id=[game_id1, game_id2])
+        x7 = PutGamesIntoCollection(games_id=[game_id1, game_id2])
         print_tit(f'Added {len(x7.games_id)} games to collection:')
         print_vert(x7.games_id)
         x6.execute()
         print_tit(f'{x6.collection_games_number} games in collection')
 
-        x8 = ITADDeleteGamesFromCollection(games_id=[game_id1, game_id2])
+        x8 = DeleteGamesFromCollection(games_id=[game_id1, game_id2])
         print_tit(f'Removed {len(x8.games_id)} games from collection:')
         print_vert(x8.games_id)
         x6.execute()
@@ -1154,36 +1154,36 @@ if __name__ == '__main__':
     if debug_parts['copies']:
         print_sep()
 
-        x9 = ITADGetCopiesOfGames(games_id_to_search=[game_id1, game_id2])
+        x9 = GetCopiesOfGames(games_id_to_search=[game_id1, game_id2])
         print_tit('Copies found:')
         print(x9.df)
 
-        x10 = ITADAddCopiesToGames(copies_game_id=[game_id1, game_id2],
-                                   copies_redeemed=[True, True],
-                                   copies_shop_id=[1, 1],
-                                   copies_price_eur=None,
-                                   copies_note=None,
-                                   copies_tags=None
-                                   )
+        x10 = AddCopiesToGames(copies_game_id=[game_id1, game_id2],
+                               copies_redeemed=[True, True],
+                               copies_shop_id=[1, 1],
+                               copies_price_eur=None,
+                               copies_note=None,
+                               copies_tags=None
+                               )
         print_tit('Copies added to games (games also added to colletion):')
         print(DataFrame({'Copies': x10.copies_game_id}))
         x9.execute()
         print_tit('Copies found after addition:')
         print(x9.df)
 
-        x10 = ITADUpdateCopiesFromGames(copies_id=x9.copies_id,
-                                        copies_redeemed=[False, False],
-                                        copies_shop_id=[3, 3],
-                                        copies_price_eur=[5, 6],
-                                        copies_note=['note x', 'note 2'],
-                                        copies_tags=[['tag1', 'tag2'], ['tag3', 'tag3']])
+        x10 = UpdateCopiesFromGames(copies_id=x9.copies_id,
+                                    copies_redeemed=[False, False],
+                                    copies_shop_id=[3, 3],
+                                    copies_price_eur=[5, 6],
+                                    copies_note=['note x', 'note 2'],
+                                    copies_tags=[['tag1', 'tag2'], ['tag3', 'tag3']])
         print_tit('Copies uptated:')
         print_vert(x10.copies_id)
         x9.execute()
         print_tit('Copies found after update:')
         print(x9.df)
 
-        x11 = ITADDeleteCopies(copies_id=x9.copies_id)
+        x11 = DeleteCopies(copies_id=x9.copies_id)
         print_tit('Deleted copies with ID:')
         print_vert(x11.copies_id)
         x9.execute()
@@ -1198,19 +1198,19 @@ if __name__ == '__main__':
     if debug_parts['categories']:
         print_sep()
 
-        x13 = ITADGetCategories()
+        x13 = GetCategories()
         print_tit('All categories:')
         print(x13.df)
 
-        x14a = ITADCreateNewCategory(category_title='New cat 1',
-                                     category_public=False)
+        x14a = CreateNewCategory(category_title='New cat 1',
+                                 category_public=False)
         print_tit('Added a new category 1:')
         print(DataFrame({'ID': [x14a.created_category_id],
                          'Title': [x14a.created_category_title],
                          'Public': [x14a.created_category_public]}))
 
-        x14b = ITADCreateNewCategory(category_title='New cat 2',
-                                     category_public=False)
+        x14b = CreateNewCategory(category_title='New cat 2',
+                                 category_public=False)
         print_tit('Added a new category 2:')
         print(DataFrame({'ID': [x14b.created_category_id],
                          'Title': [x14b.created_category_title],
@@ -1220,14 +1220,14 @@ if __name__ == '__main__':
         x13.execute()
         print(x13.df)
 
-        x15 = ITADUpdateCategories(categories_upd_id=[x14a.created_category_id,
-                                                      x14b.created_category_id],
-                                   categories_upd_title=['Updated cat 1',
-                                                         'Updated cat 2'],
-                                   categories_upd_public=[False,
-                                                          False],
-                                   categories_upd_position=[91,
-                                                            92])
+        x15 = UpdateCategories(categories_upd_id=[x14a.created_category_id,
+                                                  x14b.created_category_id],
+                               categories_upd_title=['Updated cat 1',
+                                                     'Updated cat 2'],
+                               categories_upd_public=[False,
+                                                      False],
+                               categories_upd_position=[91,
+                                                        92])
         print_tit('Updated categories:')
         print(DataFrame({'ID': x15.categories_upd_id,
                          'Title': x15.categories_upd_title,
@@ -1236,8 +1236,8 @@ if __name__ == '__main__':
         print_tit('All categories afte update (response):')
         print(x15.df)
 
-        x16 = ITADDeleteCategories([x14a.created_category_id,
-                                    x14b.created_category_id])
+        x16 = DeleteCategories([x14a.created_category_id,
+                                x14b.created_category_id])
         print_tit('Deleted categories:')
         print_vert(x16.categories_del_id)
         print_tit('All categories after deletion:')
@@ -1248,33 +1248,33 @@ if __name__ == '__main__':
     if debug_parts['user']:
         print_sep()
 
-        x17 = ITADGetUserInfo()
+        x17 = GetUserInfo()
         print_tit('Get user name:')
         print(x17.username)
 
-        x18 = ITADGetUserNotes()
+        x18 = GetUserNotes()
         print_tit('Get user notes, showing 0-10:')
         print(x18.df[0:10])
 
-        x19 = ITADPutUserNotesToGame(games_id=[game_id1, game_id2],
-                                     games_note=['bb', 'cc'])
+        x19 = PutUserNotesToGame(games_id=[game_id1, game_id2],
+                                 games_note=['bb', 'cc'])
         print_tit('Add user notes to game:')
         print(DataFrame({'Game ID': x19.games_id,
-                         'Title': ITADBaseClass.get_games_title(x19.games_id),
+                         'Title': BaseClass.get_games_title(x19.games_id),
                          'Note': x19.games_note}
                         ))
 
-        x20 = ITADDeleteUserNotesFromGame([game_id1, game_id2])
+        x20 = DeleteUserNotesFromGame([game_id1, game_id2])
         print_tit('Delete user notes from games:')
         print(DataFrame({'Game ID': x20.games_id,
-                         'Game Title': ITADBaseClass.get_games_title(x20.games_id)
+                         'Game Title': BaseClass.get_games_title(x20.games_id)
                          }))
 
     # ==================== SHOPS ====================
     if debug_parts['shops']:
         print_sep()
 
-        x21 = ITADGetShopsInfo('ES')
+        x21 = GetShopsInfo('ES')
         print_tit('Get all shops:')
         print(x21.df)
 

@@ -24,7 +24,7 @@ Author: [tosione](https://https://github.com/tosione)
 
 # Classes
 
-- `ITADBaseClass`: Base class for all ITAD client classes.
+- `BaseClass`: Base class for all ITAD client classes.
     - `get_access_token`: loads from JSON or obtains new tokens.
     - `get_new_tokens_from_itad`: obtains new tokens.
     - `test_oauth_session`: tests the OAuth2 session.
@@ -35,24 +35,24 @@ Author: [tosione](https://https://github.com/tosione)
     - `get_games_url`: gets the URLs of multiple games.
     - `save_json`: Saves JSON data to a file.
     - `load_json`: Loads JSON data from a file.
-- `ITADSearchGames`
-- `ITADGetGameInfo`
-- `ITADGetGamesFromWaitlist`
-- `ITADPutGamesIntoWaitlist`
-- `ITADDeleteGamesFromWaitlist`
-- `ITADGetGamesFromCollection`
-- `ITADPutGamesIntoCollection`
-- `ITADDelGamesFromCollection`
-- `ITADGetCopiesOfGames`
-- `ITADAddCopiesToGames`
-- `ITADUpdateCopiesOfGames`
-- `ITADDeleteCopiesOfGames`
-- `ITADGetCategories`
-- `ITADCreateNewCategory`
-- `ITADUpdateCategories`
-- `ITADDeleteCategories`
-- `ITADGetUserInfo`
-- `ITADGetUserNotes`
-- `ITADPutUserNotesFromGame`
-- `ITADDeleteUserNotesFromGame`
-- `ITADGetShopsInfo`
+- `SearchGames`
+- `GetGameInfo`
+- `GetGamesFromWaitlist`
+- `PutGamesIntoWaitlist`
+- `DeleteGamesFromWaitlist`
+- `GetGamesFromCollection`
+- `PutGamesIntoCollection`
+- `DelGamesFromCollection`
+- `GetCopiesOfGames`
+- `AddCopiesToGames`
+- `UpdateCopiesOfGames`
+- `DeleteCopiesOfGames`
+- `GetCategories`
+- `CreateNewCategory`
+- `UpdateCategories`
+- `DeleteCategories`
+- `GetUserInfo`
+- `GetUserNotes`
+- `PutUserNotesFromGame`
+- `DeleteUserNotesFromGame`
+- `GetShopsInfo`
