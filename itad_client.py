@@ -977,6 +977,11 @@ def print_tit(x):
     print_color.print(x, color='blue')
 
 
+def print_sep():
+    print('')
+    print_color.print('========================================', color='blue')
+
+
 def print_err(x):
     print_color.print(x, color='red')
 
@@ -994,6 +999,7 @@ if __name__ == '__main__':
     """
 
     # ==================== INITIAL SETTINGS ====================
+    print_sep()
     print_tit('Start test')
 
     pandas.set_option('display.max_colwidth', None)
@@ -1017,6 +1023,7 @@ if __name__ == '__main__':
 
     # ==================== SEARCH GAMES & INFO ====================
     if debug_parts['game_info']:
+        print_sep()
 
         x1 = ITADSearchGames(game_title_to_search='teken 8',
                              max_results=999)
@@ -1043,6 +1050,7 @@ if __name__ == '__main__':
 
     # ==================== WAITLIST  ====================
     if debug_parts['waitlist']:
+        print_sep()
 
         x3 = ITADGetGamesFromWaitlist()
         print_tit(f'{x3.waitlist_games_number} games in Wailist, showing 10:')
@@ -1063,6 +1071,8 @@ if __name__ == '__main__':
 
     # ==================== COLLECTION ====================
     if debug_parts['collection']:
+        print_sep()
+
         x6 = ITADGetGamesFromCollection()
         print_tit(
             f'{x6.collection_games_number} games in collection, showing 10:')
@@ -1082,6 +1092,8 @@ if __name__ == '__main__':
 
     # ==================== COPIES ====================
     if debug_parts['copies']:
+        print_sep()
+
         x9 = ITADGetCopiesOfGames(games_id_to_search=[game_id1, game_id2])
         print_tit('Copies found:')
         print(x9.df)
@@ -1124,6 +1136,8 @@ if __name__ == '__main__':
 
     # ==================== CATERORIES ====================
     if debug_parts['categories']:
+        print_sep()
+
         x13 = ITADGetCategories()
         print_tit('All categories:')
         print(x13.df)
@@ -1172,6 +1186,8 @@ if __name__ == '__main__':
 
     # ==================== USER ====================
     if debug_parts['user']:
+        print_sep()
+
         x17 = ITADGetUserInfo()
         print_tit('Get user name:')
         print(x17.username)
@@ -1194,4 +1210,5 @@ if __name__ == '__main__':
                          'Game Title': ITADBaseClass.get_games_title(x20.games_id)
                          }))
 
+    print_sep()
     print_tit('Done')
