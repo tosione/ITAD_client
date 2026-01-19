@@ -55,11 +55,9 @@ For more information on the ITAD API, refer to the official
 documentation: https://docs.isthereanydeal.com/
 
 Author: tosione
-Date: 2026-01-19
-Version: 1.0
 """
 
-__version__ = '0.1'
+__version__ = '1.0'
 __author__ = 'tosione'
 
 # Standard library imports
