@@ -182,37 +182,37 @@ class ITADBaseClass:
         else:
             raise ValueError(
                 'Invalid security type: valid ''key'' or ''oa2'' ')
-            return 0, None
 
         if endpoint.startswith('http') or endpoint == "":
             raise ValueError('Endpoint contains full HTTP addres?')
-            return 0, None
         else:
             url = BASE_URL + endpoint
 
         # make request
         if (method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']):
-            resp = requests.request(method=method,
-                                    url=url,
-                                    headers=header,
-                                    params=params,
-                                    json=body)
-            if resp.status_code >= 400:
+            resp_msg = requests.request(method=method,
+                                        url=url,
+                                        headers=header,
+                                        params=params,
+                                        json=body)
+            cls.resp_code = resp_msg.status_code
+
+            if resp_msg.status_code >= 400:
                 # handle request error
                 print_err(
-                    f'HTTP error code({resp.status_code}): {resp.reason}. {resp.json()['reason_phrase']}')
-                if 'details' in resp.json():
-                    print_err(f'\tDetails: {resp.json()['details']}')
-                return resp.status_code, None
-            elif resp.content == b'':
-                # request ok with empty response
-                return resp.status_code, None
+                    f'HTTP error code({resp_msg.status_code}): {resp_msg.reason}. {resp_msg.json()['reason_phrase']}')
+                if 'details' in resp_msg.json():
+                    print_err(f'\tDetails: {resp_msg.json()['details']}')
+
+                cls.resp = None
+            elif resp_msg.content == b'':
+                cls.resp = None  # request ok with empty response
             else:
-                # request ok
-                return resp.status_code, resp.json()
+                cls.resp = resp_msg.json()   # request ok
         else:
             print_err('Invalid HTTP method')
-            return 0, None
+            cls.resp_code = 0
+            cls.resp = None
 
     @classmethod
     def get_games_title(cls, games_id):
@@ -221,16 +221,16 @@ class ITADBaseClass:
         titles = []
         for gid in games_id:
             # make request
-            resp_code, resp = cls.send_request(method='GET',
-                                               endpoint='games/info/v2',
-                                               security='key',
-                                               params={'id': gid},
-                                               header={},
-                                               body={}
-                                               )
+            cls.send_request(method='GET',
+                             endpoint='games/info/v2',
+                             security='key',
+                             params={'id': gid},
+                             header={},
+                             body={}
+                             )
             # process response data
-            if resp_code == 200:
-                titles.append(resp['title'])
+            if cls.resp_code == 200:
+                titles.append(cls.resp['title'])
             else:
                 titles.append(None)
         return titles
@@ -238,16 +238,16 @@ class ITADBaseClass:
     @classmethod
     def get_game_title(cls, game_id):
         # make request
-        resp_code, resp = cls.send_request(method='GET',
-                                           endpoint='games/info/v2',
-                                           security='key',
-                                           params={'id': game_id},
-                                           header={},
-                                           body={}
-                                           )
+        cls.send_request(method='GET',
+                         endpoint='games/info/v2',
+                         security='key',
+                         params={'id': game_id},
+                         header={},
+                         body={}
+                         )
         # process response data
-        if resp_code == 200:
-            return resp['title']
+        if cls.resp_code == 200:
+            return cls.resp['title']
         else:
             return None
 
@@ -303,14 +303,14 @@ class ITADSearchGames(ITADBaseClass):
         assert self.game_title_to_search is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='GET',
-                                                      endpoint='games/search/v1',
-                                                      security='key',
-                                                      params={'title': self.game_title_to_search,
-                                                              'results': self.max_results},
-                                                      header={},
-                                                      body={}
-                                                      )
+        self.send_request(method='GET',
+                          endpoint='games/search/v1',
+                          security='key',
+                          params={'title': self.game_title_to_search,
+                                  'results': self.max_results},
+                          header={},
+                          body={}
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -346,14 +346,14 @@ class ITADGetGameInfo(ITADBaseClass):
         assert self.game_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='GET',
-                                                      endpoint='games/info/v2',
-                                                      security='key',
-                                                      params={
-                                                          'id': self.game_id},
-                                                      header={},
-                                                      body={}
-                                                      )
+        self.send_request(method='GET',
+                          endpoint='games/info/v2',
+                          security='key',
+                          params={
+                              'id': self.game_id},
+                          header={},
+                          body={}
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -375,13 +375,13 @@ class ITADGetGamesFromWaitlist(ITADBaseClass):
 
     def execute(self):
         # make request
-        self.resp_code, self.resp = self.send_request(method='GET',
-                                                      endpoint='waitlist/games/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body={}
-                                                      )
+        self.send_request(method='GET',
+                          endpoint='waitlist/games/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body={}
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -418,13 +418,13 @@ class ITADPutGamesIntoWaitlist(ITADBaseClass):
         assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='PUT',
-                                                      endpoint='waitlist/games/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=self.games_id
-                                                      )
+        self.send_request(method='PUT',
+                          endpoint='waitlist/games/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=self.games_id
+                          )
 
 
 class ITADDelGamesFromWaitlist(ITADBaseClass):
@@ -441,13 +441,13 @@ class ITADDelGamesFromWaitlist(ITADBaseClass):
         assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='DELETE',
-                                                      endpoint='waitlist/games/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=self.games_id
-                                                      )
+        self.send_request(method='DELETE',
+                          endpoint='waitlist/games/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=self.games_id
+                          )
 
 
 class ITADGetGamesFromCollection(ITADBaseClass):
@@ -458,13 +458,13 @@ class ITADGetGamesFromCollection(ITADBaseClass):
 
     def execute(self):
         # make request
-        self.resp_code, self.resp = self.send_request(method='GET',
-                                                      endpoint='collection/games/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body={}
-                                                      )
+        self.send_request(method='GET',
+                          endpoint='collection/games/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body={}
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -501,13 +501,13 @@ class ITADPutGamesIntoCollection(ITADBaseClass):
         assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='PUT',
-                                                      endpoint='collection/games/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=self.games_id
-                                                      )
+        self.send_request(method='PUT',
+                          endpoint='collection/games/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=self.games_id
+                          )
 
 
 class ITADDelGamesFromCollection(ITADBaseClass):
@@ -524,13 +524,13 @@ class ITADDelGamesFromCollection(ITADBaseClass):
         assert self.games_id is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='DELETE',
-                                                      endpoint='collection/games/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=self.games_id
-                                                      )
+        self.send_request(method='DELETE',
+                          endpoint='collection/games/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=self.games_id
+                          )
 
 
 class ITADGetCopiesOfGames(ITADBaseClass):
@@ -548,13 +548,13 @@ class ITADGetCopiesOfGames(ITADBaseClass):
         assert self.games_id_to_search is not [], MSG_PARAM_EMPTY
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='GET',
-                                                      endpoint='collection/copies/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=self.games_id_to_search
-                                                      )
+        self.send_request(method='GET',
+                          endpoint='collection/copies/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=self.games_id_to_search
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -633,19 +633,19 @@ class ITADAddCopiesToGames(ITADBaseClass):
                 'amount': price, 'currency':  'EUR'} for price in self.copies_price_eur]
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='POST',
-                                                      endpoint='collection/copies/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=DataFrame({'gameId': self.copies_game_id,
-                                                                      'redeemed':  self.copies_redeemed,
-                                                                      'shop': self.copies_shop_id,
-                                                                      'price': self.copies_prices,
-                                                                      'note':  self.copies_note,
-                                                                      'tags':  self.copies_tags}
-                                                                     ).to_dict(orient='records')
-                                                      )
+        self.send_request(method='POST',
+                          endpoint='collection/copies/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=DataFrame({'gameId': self.copies_game_id,
+                                          'redeemed':  self.copies_redeemed,
+                                          'shop': self.copies_shop_id,
+                                          'price': self.copies_prices,
+                                          'note':  self.copies_note,
+                                          'tags':  self.copies_tags}
+                                         ).to_dict(orient='records')
+                          )
 
 
 class ITADUpdateCopiesFromGames(ITADBaseClass):
@@ -685,19 +685,19 @@ class ITADUpdateCopiesFromGames(ITADBaseClass):
                 'amount': price, 'currency':  'EUR'} for price in self.copies_price_eur]
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='PATCH',
-                                                      endpoint='collection/copies/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=DataFrame({'id': self.copies_id,
-                                                                      'redeemed': self.copies_redeemed,
-                                                                      'shop': self.copies_shop_id,
-                                                                      'price': self.copies_prices,
-                                                                      'note': self.copies_note,
-                                                                      'tags': self.copies_tags}
-                                                                     ).to_dict(orient='records')
-                                                      )
+        self.send_request(method='PATCH',
+                          endpoint='collection/copies/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=DataFrame({'id': self.copies_id,
+                                          'redeemed': self.copies_redeemed,
+                                          'shop': self.copies_shop_id,
+                                          'price': self.copies_prices,
+                                          'note': self.copies_note,
+                                          'tags': self.copies_tags}
+                                         ).to_dict(orient='records')
+                          )
 
 
 class ITADDeleteCopies(ITADBaseClass):
@@ -713,13 +713,13 @@ class ITADDeleteCopies(ITADBaseClass):
         assert self.copies_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='DELETE',
-                                                      endpoint='collection/copies/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=self.copies_id
-                                                      )
+        self.send_request(method='DELETE',
+                          endpoint='collection/copies/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=self.copies_id
+                          )
 
 
 class ITADGetCategories(ITADBaseClass):
@@ -730,13 +730,13 @@ class ITADGetCategories(ITADBaseClass):
 
     def execute(self):
         # make request
-        self.resp_code, self.resp = self.send_request(method='GET',
-                                                      endpoint='collection/groups/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body={}
-                                                      )
+        self.send_request(method='GET',
+                          endpoint='collection/groups/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body={}
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -767,14 +767,14 @@ class ITADCreateNewCategory(ITADBaseClass):
         assert self.category_public is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='POST',
-                                                      endpoint='collection/groups/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body={'title': self.category_title,
-                                                            'public': self.category_public}
-                                                      )
+        self.send_request(method='POST',
+                          endpoint='collection/groups/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body={'title': self.category_title,
+                                'public': self.category_public}
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -810,17 +810,17 @@ class ITADUpdateCategories(ITADBaseClass):
         # prepare data
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='PATCH',
-                                                      endpoint='collection/groups/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=DataFrame({'id': self.categories_upd_id,
-                                                                      'title':  self.categories_upd_title,
-                                                                      'public':  self.categories_upd_public,
-                                                                      'position':  self.categories_upd_position}
-                                                                     ).to_dict(orient='records')
-                                                      )
+        self.send_request(method='PATCH',
+                          endpoint='collection/groups/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=DataFrame({'id': self.categories_upd_id,
+                                          'title':  self.categories_upd_title,
+                                          'public':  self.categories_upd_public,
+                                          'position':  self.categories_upd_position}
+                                         ).to_dict(orient='records')
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -848,13 +848,13 @@ class ITADDeleteCategories(ITADBaseClass):
         assert self.categories_del_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='DELETE',
-                                                      endpoint='collection/groups/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=self.categories_del_id
-                                                      )
+        self.send_request(method='DELETE',
+                          endpoint='collection/groups/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=self.categories_del_id
+                          )
 
 
 class ITADGetUserInfo(ITADBaseClass):
@@ -866,13 +866,13 @@ class ITADGetUserInfo(ITADBaseClass):
     def execute(self):
         pass
         # make request
-        self.resp_code, self.resp = self.send_request(method='GET',
-                                                      endpoint='user/info/v2',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body={}
-                                                      )
+        self.send_request(method='GET',
+                          endpoint='user/info/v2',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body={}
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -887,13 +887,13 @@ class ITADGetUserNotes(ITADBaseClass):
 
     def execute(self):
         # make request
-        self.resp_code, self.resp = self.send_request(method='GET',
-                                                      endpoint='user/notes/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body={}
-                                                      )
+        self.send_request(method='GET',
+                          endpoint='user/notes/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body={}
+                          )
 
         # process response data
         if self.resp_code == 200:
@@ -925,15 +925,15 @@ class ITADPutUserNotesToGame(ITADBaseClass):
         assert len_oblig_arg(self.games_note, n), MSG_PARAM_WRONG_LEN
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='PUT',
-                                                      endpoint='user/notes/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=DataFrame({'gid': self.games_id,
-                                                                      'note':  self.games_note}
-                                                                     ).to_dict(orient='records')
-                                                      )
+        self.send_request(method='PUT',
+                          endpoint='user/notes/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=DataFrame({'gid': self.games_id,
+                                          'note':  self.games_note}
+                                         ).to_dict(orient='records')
+                          )
 
 
 class ITADDelUserNotesFromGame(ITADBaseClass):
@@ -949,16 +949,52 @@ class ITADDelUserNotesFromGame(ITADBaseClass):
         assert self.games_id is not None, MSG_PARAM_NONE
 
         # make request
-        self.resp_code, self.resp = self.send_request(method='DELETE',
-                                                      endpoint='user/notes/v1',
-                                                      security='oa2',
-                                                      params={},
-                                                      header={},
-                                                      body=self.games_id
-                                                      )
+        self.send_request(method='DELETE',
+                          endpoint='user/notes/v1',
+                          security='oa2',
+                          params={},
+                          header={},
+                          body=self.games_id
+                          )
 
+
+class ITADGetShopsInfo(ITADBaseClass):
+    # https://docs.isthereanydeal.com/#tag/Shops/operation/service-shops-v1
+    def __init__(self, country_code):
+        self.country_code = country_code
+        self.execute()
+
+    def execute(self):
+        # verify input data
+        assert self.country_code is not None, MSG_PARAM_NONE
+
+        # make request
+        self.send_request(method='GET',
+                          endpoint='service/shops/v1',
+                          security='key',
+                          params={'country': self.country_code},
+                          header={},
+                          body={}
+                          )
+
+        # process response data
+        if self.resp_code == 200:
+            self.df = DataFrame(self.resp)
+            if not self.df.empty:
+                self.shop_id = self.df['id'].to_list()
+                self.shop_title = self.df['title'].to_list()
+                self.shop_number_of_deals = self.df['deals'].to_list()
+                self.shop_number_of_games = self.df['games'].to_list()
+                self.upd_date = self.df['update'].to_list()
+            else:
+                self.shop_id = None
+                self.shop_title = None
+                self.shop_number_of_deals = None
+                self.shop_number_of_games = None
+                self.upd_date = None
 
 # ==================== Auxiliary functions ====================
+
 
 def len_opt_arg(x, n):
     return x is None or len(x) == n
@@ -1019,6 +1055,7 @@ if __name__ == '__main__':
                    'copies': True,
                    'categories': True,
                    'user': True,
+                   'shops': True
                    }
 
     # ==================== SEARCH GAMES & INFO ====================
@@ -1209,6 +1246,14 @@ if __name__ == '__main__':
         print(DataFrame({'Game ID': x20.games_id,
                          'Game Title': ITADBaseClass.get_games_title(x20.games_id)
                          }))
+
+    # ==================== SHOPS ====================
+    if debug_parts['shops']:
+        print_sep()
+
+        x21 = ITADGetShopsInfo('ES')
+        print_tit('Get all shops:')
+        print(x21.df)
 
     print_sep()
     print_tit('Done')
