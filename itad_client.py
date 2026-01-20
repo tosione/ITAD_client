@@ -558,16 +558,17 @@ class DeleteGamesFromCollection(BaseClass):
 
 class GetCopiesOfGames(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Collection-Copies/operation/collection-copies-v1-get
-    # Description is wrong, it requieres Game IDs
+    # Description misses som information:
+    # - If body is None, all games copies will be returned
+    # - If body is a list of Game IDs, it will return all copies of those games
 
     def __init__(self,
-                 games_id_to_search):
+                 games_id_to_search=None):
         self.games_id_to_search = games_id_to_search
         self.execute()
 
     def execute(self):
         # verify input data
-        assert self.games_id_to_search is not None, MSG_PARAM_NONE
         assert self.games_id_to_search is not [], MSG_PARAM_EMPTY
 
         # make request
@@ -1154,9 +1155,14 @@ if __name__ == '__main__':
     if debug_parts['copies']:
         print_sep()
 
-        x9 = GetCopiesOfGames(games_id_to_search=[game_id1, game_id2])
-        print_tit('Copies found:')
-        print(x9.df)
+        x9a = GetCopiesOfGames()
+        print_tit('All game copies in collection:')
+        print(x9a.df)
+
+        x9b = GetCopiesOfGames(games_id_to_search=[game_id1, game_id2])
+        print_tit('Copies found of Game IDs:')
+        print(x9b.games_id_to_search)
+        print(x9b.df)
 
         x10 = AddCopiesToGames(copies_game_id=[game_id1, game_id2],
                                copies_redeemed=[True, True],
@@ -1167,11 +1173,11 @@ if __name__ == '__main__':
                                )
         print_tit('Copies added to games (games also added to colletion):')
         print(DataFrame({'Copies': x10.copies_game_id}))
-        x9.execute()
+        x9b.execute()
         print_tit('Copies found after addition:')
-        print(x9.df)
+        print(x9b.df)
 
-        x10 = UpdateCopiesFromGames(copies_id=x9.copies_id,
+        x10 = UpdateCopiesFromGames(copies_id=x9b.copies_id,
                                     copies_redeemed=[False, False],
                                     copies_shop_id=[3, 3],
                                     copies_price_eur=[5, 6],
@@ -1179,16 +1185,16 @@ if __name__ == '__main__':
                                     copies_tags=[['tag1', 'tag2'], ['tag3', 'tag3']])
         print_tit('Copies uptated:')
         print_vert(x10.copies_id)
-        x9.execute()
+        x9b.execute()
         print_tit('Copies found after update:')
-        print(x9.df)
+        print(x9b.df)
 
-        x11 = DeleteCopies(copies_id=x9.copies_id)
+        x11 = DeleteCopies(copies_id=x9b.copies_id)
         print_tit('Deleted copies with ID:')
         print_vert(x11.copies_id)
-        x9.execute()
+        x9b.execute()
         print_tit('Copies found after deletion:')
-        print(x9.df)
+        print(x9b.df)
 
         x8.execute()
         print_tit(f'Removed {len(x8.games_id)} games from collection:')
