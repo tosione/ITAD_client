@@ -582,36 +582,39 @@ class GetCopiesOfGames(BaseClass):
 
         # process response data
         if self.resp_code == 200:
-            self.df = DataFrame(self.resp)
-            if not self.df.empty:
-                self.games = DataFrame(self.df['game'].to_list())
+            # flatten the response into a pandas dataframe
+            self.df = pandas.json_normalize(self.resp)
 
-                # replace None shops with dictionaries of None values
-                # to avoid exception with DataFrame
-                shop_list = [{'id': None, 'name': None}
-                             if shop is None else shop for shop in self.df['shop'].to_list()]
-                self.shops = DataFrame(shop_list)
+            if not self.df.empty:
+                # if shop is empty, shop.id and shop.name will not be created by json_normalize
+                if 'shop.id' not in self.df:
+                    self.df['shop.id'] = None
+                    self.df['shop.name'] = None
+                # if price is empty, price.amount and price.currency will not be created by json_normalize
+                if 'price.amount' not in self.df:
+                    self.df['price.amount'] = None
+                    self.df['price.currency'] = None
 
                 self.copies_id = self.df['id'].to_list()
-                self.copies_game_id = self.games['id'].to_list()
-                self.copies_shop_id = self.shops['id'].to_list()
-                self.copies_shop_name = self.shops['name'].to_list()
-                self.copies_shop = self.df['shop'].to_list()
+                self.copies_game_id = self.df['game.id'].to_list()
+                self.copies_shop_id = self.df['shop.id'].to_list()
+                self.copies_shop_name = self.df['shop.name'].to_list()
                 self.copies_redeemed = self.df['redeemed'].to_list()
-                self.copies_price = self.df['price'].to_list()
+                self.copies_price = self.df['price.amount'].to_list()
+                self.copies_currency = self.df['price.currency'].to_list()
                 self.copies_note = self.df['note'].to_list()
                 self.copies_tags = self.df['tags'].to_list()
                 self.copies_date_added = self.df['added'].to_list()
-                self.copies_number = len(self.copies_game_id)
+                self.copies_number = len(self.copies_id)
 
             else:
                 self.copies_id = None
                 self.copies_game_id = None
                 self.copies_shop_id = None
                 self.copies_shop_name = None
-                self.copies_shop = None
                 self.copies_redeemed = None
                 self.copies_price = None
+                self.copies_currency = None
                 self.copies_note = None
                 self.copies_tags = None
                 self.copies_date_added = None
@@ -1155,9 +1158,9 @@ if __name__ == '__main__':
     if debug_parts['copies']:
         print_sep()
 
-        x9a = GetCopiesOfGames()
-        print_tit('All game copies in collection:')
-        print(x9a.df)
+        # x9a = GetCopiesOfGames()
+        # print_tit('All game copies in collection:')
+        # print(x9a.df)
 
         x9b = GetCopiesOfGames(games_id_to_search=[game_id1, game_id2])
         print_tit('Copies found of Game IDs:')
@@ -1177,7 +1180,7 @@ if __name__ == '__main__':
         print_tit('Copies found after addition:')
         print(x9b.df)
 
-        x10 = UpdateCopiesFromGames(copies_id=x9b.copies_id,
+        x10 = UpdateCopiesFromGames(copies_id=x9b.copies_id[0:2],
                                     copies_redeemed=[False, False],
                                     copies_shop_id=[3, 3],
                                     copies_price_eur=[5, 6],
@@ -1195,10 +1198,6 @@ if __name__ == '__main__':
         x9b.execute()
         print_tit('Copies found after deletion:')
         print(x9b.df)
-
-        x8.execute()
-        print_tit(f'Removed {len(x8.games_id)} games from collection:')
-        print_vert(x8.games_id)
 
     # ==================== CATERORIES ====================
     if debug_parts['categories']:
