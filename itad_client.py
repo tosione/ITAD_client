@@ -242,12 +242,12 @@ class BaseClass:
         assert games_id is not None, MSG_PARAM_NONE
         assert type(games_id) is list
         titles = []
-        for gid in games_id:
+        for id in games_id:
             # make request
             cls.send_request(method='GET',
                              endpoint='games/info/v2',
                              security='key',
-                             params={'id': gid},
+                             params={'id': id},
                              header={},
                              body={}
                              )
@@ -339,12 +339,16 @@ class SearchGames(BaseClass):
         if self.resp_code == 200:
             self.df = DataFrame(self.resp)
             if not self.df.empty:
-                self.found_games_id = self.df['id'].to_list()
-                self.found_games_slug = self.df['slug'].to_list()
-                self.found_games_title = self.df['title'].to_list()
-                self.found_games_type = self.df['type'].to_list()
+                self.df = self.df.rename(columns={'id': 'game_id',
+                                                  'slug': 'game_slug',
+                                                  'title': 'game_title',
+                                                  'type': 'game_type',
+                                                  'mature': 'mature'}).drop(columns=['assets'], errors='ignore')
+                self.found_games_id = self.df['game_id'].to_list()
+                self.found_games_slug = self.df['game_slug'].to_list()
+                self.found_games_title = self.df['game_title'].to_list()
+                self.found_games_type = self.df['game_type'].to_list()
                 self.found_game_mature = self.df['mature'].to_list()
-                self.found_games_assets = self.df['assets'].to_list()
                 self.found_games_number = len(self.found_games_id)
             else:
                 self.found_games_id = []
@@ -352,7 +356,6 @@ class SearchGames(BaseClass):
                 self.found_games_title = []
                 self.found_games_type = []
                 self.found_game_mature = []
-                self.found_games_assets = []
                 self.found_games_number = 0
 
 
@@ -389,6 +392,12 @@ class GetGameInfo(BaseClass):
             self.game_app_id = self.resp['appid']
             self.game_urls = self.resp['urls']
 
+            # dataframe only created for easy result printing
+            self.df = pandas.json_normalize(self.resp, sep='_').transpose()
+            self.df = self.df.rename(index={'slug': 'game_slug',
+                                            'title': 'game_title',
+                                            'type': 'game_type', }, columns={0: 'value'})
+
 
 class GetGamesFromWaitlist(BaseClass):
     # https://docs.isthereanydeal.com/#tag/Waitlist-Games/operation/waitlist-games-v1-get
@@ -410,18 +419,22 @@ class GetGamesFromWaitlist(BaseClass):
         if self.resp_code == 200:
             self.df = DataFrame(self.resp)
             if not self.df.empty:
-                self.waitlist_games_id = self.df['id'].to_list()
-                self.waitlist_games_slug = self.df['slug'].to_list()
-                self.waitlist_games_title = self.df['title'].to_list()
-                self.waitlist_games_assets = self.df['assets'].to_list()
+                self.df = self.df.rename(columns={'id': 'game_id',
+                                                  'slug': 'game_slug',
+                                                  'title': 'game_title',
+                                                  'mature': 'mature',
+                                                  'added': 'date_added'}).drop(columns=['assets'], errors='ignore')
+                self.waitlist_games_id = self.df['game_id'].to_list()
+                self.waitlist_games_slug = self.df['game_slug'].to_list()
+                self.waitlist_games_title = self.df['game_title'].to_list()
                 self.waitlist_games_is_mature = self.df['mature'].to_list()
-                self.waitlist_games_date_added = self.df['added'].to_list()
+                self.waitlist_games_date_added = self.df['date_added'].to_list(
+                )
                 self.waitlist_games_number = len(self.waitlist_games_id)
             else:
                 self.waitlist_games_id = []
                 self.waitlist_games_slug = []
                 self.waitlist_games_title = []
-                self.waitlist_games_assets = []
                 self.waitlist_games_is_mature = []
                 self.waitlist_games_date_added = []
                 self.waitlist_games_number = 0
@@ -493,18 +506,23 @@ class GetGamesFromCollection(BaseClass):
         if self.resp_code == 200:
             self.df = DataFrame(self.resp)
             if not self.df.empty:
-                self.collection_games_id = self.df['id'].to_list()
-                self.collection_games_slug = self.df['slug'].to_list()
-                self.collection_games_title = self.df['title'].to_list()
-                self.collection_games_assets = self.df['assets'].to_list()
+                self.df = self.df.rename(columns={'id': 'game_id',
+                                                  'slug': 'game_slug',
+                                                  'title': 'game_title',
+                                                  'type': 'game_type',
+                                                  'mature': 'mature',
+                                                  'added': 'date_added'}).drop(columns=['assets'], errors='ignore')
+                self.collection_games_id = self.df['game_id'].to_list()
+                self.collection_games_slug = self.df['game_slug'].to_list()
+                self.collection_games_title = self.df['game_title'].to_list()
                 self.collection_games_is_mature = self.df['mature'].to_list()
-                self.collection_games_date_added = self.df['added'].to_list()
+                self.collection_games_date_added = self.df['date_added'].to_list(
+                )
                 self.collection_games_number = len(self.collection_games_id)
             else:
                 self.collection_games_id = []
                 self.collection_games_slug = []
                 self.collection_games_title = []
-                self.collection_games_assets = []
                 self.collection_games_is_mature = []
                 self.collection_games_date_added = []
                 self.collection_games_number = 0
@@ -583,28 +601,34 @@ class GetCopiesOfGames(BaseClass):
         # process response data
         if self.resp_code == 200:
             # flatten the response into a pandas dataframe
-            self.df = pandas.json_normalize(self.resp)
+            self.df = pandas.json_normalize(self.resp, sep='_')
 
             if not self.df.empty:
                 # if shop is empty, shop.id and shop.name will not be created by json_normalize
-                if 'shop.id' not in self.df:
-                    self.df['shop.id'] = None
-                    self.df['shop.name'] = None
+                if 'shop_id' not in self.df:
+                    self.df['shop_id'] = None
+                    self.df['shop_name'] = None
                 # if price is empty, price.amount and price.currency will not be created by json_normalize
                 if 'price.amount' not in self.df:
-                    self.df['price.amount'] = None
-                    self.df['price.currency'] = None
+                    self.df['price_amount'] = None
+                    self.df['price_currency'] = None
 
-                self.copies_id = self.df['id'].to_list()
-                self.copies_game_id = self.df['game.id'].to_list()
-                self.copies_shop_id = self.df['shop.id'].to_list()
-                self.copies_shop_name = self.df['shop.name'].to_list()
+                self.df = self.df.rename(columns={'id': 'copy_id',
+                                                  'slug': 'game_slug',
+                                                  'title': 'game_title',
+                                                  'type': 'game_type',
+                                                  'added': 'date_added'}).drop(columns=['assets'], errors='ignore')
+
+                self.copies_id = self.df['copy_id'].to_list()
+                self.copies_game_id = self.df['game_id'].to_list()
+                self.copies_shop_id = self.df['shop_id'].to_list()
+                self.copies_shop_name = self.df['shop_name'].to_list()
                 self.copies_redeemed = self.df['redeemed'].to_list()
-                self.copies_price = self.df['price.amount'].to_list()
-                self.copies_currency = self.df['price.currency'].to_list()
+                self.copies_price = self.df['price_amount'].to_list()
+                self.copies_currency = self.df['price_currency'].to_list()
                 self.copies_note = self.df['note'].to_list()
                 self.copies_tags = self.df['tags'].to_list()
-                self.copies_date_added = self.df['added'].to_list()
+                self.copies_date_added = self.df['date_added'].to_list()
                 self.copies_number = len(self.copies_id)
 
             else:
@@ -769,8 +793,11 @@ class GetCategories(BaseClass):
         if self.resp_code == 200:
             self.df = DataFrame(self.resp)
             if not self.df.empty:
-                self.categories_id = self.df['id'].to_list()
-                self.categories_title = self.df['title'].to_list()
+                self.df = self.df.rename(columns={'id': 'category_id',
+                                                  'title': 'category_title',
+                                                  'public': 'public'})
+                self.categories_id = self.df['category_id'].to_list()
+                self.categories_title = self.df['category_title'].to_list()
                 self.categories_public = self.df['public'].to_list()
             else:
                 self.categories_id = None
@@ -808,6 +835,12 @@ class CreateNewCategory(BaseClass):
             self.created_category_id = self.resp['id']
             self.created_category_title = self.resp['title']
             self.created_category_public = self.resp['public']
+
+            # dataframe only created for easy result printing
+            self.df = pandas.json_normalize(self.resp)
+            self.df = self.df.rename(columns={'id': 'category_id',
+                                              'title': 'category_title',
+                                              'public': 'public'})
 
 
 class UpdateCategories(BaseClass):
@@ -853,8 +886,11 @@ class UpdateCategories(BaseClass):
         if self.resp_code == 200:
             self.df = DataFrame(self.resp)
             if not self.df.empty:
-                self.categories_id = self.df['id'].to_list()
-                self.categories_title = self.df['title'].to_list()
+                self.df = self.df.rename(columns={'id': 'category_id',
+                                                  'title': 'category_title',
+                                                  'public': 'public'})
+                self.categories_id = self.df['category_id'].to_list()
+                self.categories_title = self.df['category_title'].to_list()
                 self.categories_public = self.df['public'].to_list()
             else:
                 self.categories_id = None
@@ -891,7 +927,6 @@ class GetUserInfo(BaseClass):
         self.execute()
 
     def execute(self):
-        pass
         # make request
         self.send_request(method='GET',
                           endpoint='user/info/v2',
@@ -926,7 +961,9 @@ class GetUserNotes(BaseClass):
         if self.resp_code == 200:
             self.df = DataFrame(self.resp)
             if not self.df.empty:
-                self.found_games_id = self.df['gid'].to_list()
+                self.df = self.df.rename(columns={'gid': 'game_id',
+                                                  'note': 'note'})
+                self.found_games_id = self.df['game_id'].to_list()
                 self.found_notes = self.df['note'].to_list()
             else:
                 self.found_games_id = None
@@ -1008,11 +1045,16 @@ class GetShopsInfo(BaseClass):
         if self.resp_code == 200:
             self.df = DataFrame(self.resp)
             if not self.df.empty:
-                self.shop_id = self.df['id'].to_list()
-                self.shop_title = self.df['title'].to_list()
-                self.shop_number_of_deals = self.df['deals'].to_list()
-                self.shop_number_of_games = self.df['games'].to_list()
-                self.upd_date = self.df['update'].to_list()
+                self.df = self.df.rename(columns={'id': 'shop_id',
+                                                  'title': 'shop_title',
+                                                  'deals': 'n_deals',
+                                                  'games': 'n_games',
+                                                  'update': 'date_updated'})
+                self.shop_id = self.df['shop_id'].to_list()
+                self.shop_title = self.df['shop_title'].to_list()
+                self.shop_number_of_deals = self.df['n_deals'].to_list()
+                self.shop_number_of_games = self.df['n_games'].to_list()
+                self.upd_date = self.df['date_updated'].to_list()
             else:
                 self.shop_id = None
                 self.shop_title = None
@@ -1065,7 +1107,8 @@ if __name__ == '__main__':
     print_sep()
     print_tit('Start test')
 
-    pandas.set_option('display.max_colwidth', None)
+    pandas.set_option('display.max_colwidth', 60)
+    # pandas.set_option('display.max_columns', None)
 
     BaseClass.get_access_token(api_key=private_data.API_KEY,
                                client_id=private_data.CLIENT_ID,
@@ -1092,12 +1135,12 @@ if __name__ == '__main__':
         x1 = SearchGames(game_title_to_search='teken 8',
                          max_results=999)
         print_tit(
-            f'{x1.found_games_number} games found games for \'{x1.game_title_to_search}\', showing 10:')
-        print_vert(x1.found_games_title[0:10])
+            f'{x1.found_games_number} games found games for \'{x1.game_title_to_search}\':')
+        print(x1.df)
 
         x2 = GetGameInfo(game_id=game_id1)
         print_tit(f'Get game info for Game ID: {x2.game_id}')
-        print(x2.game_info)
+        print(x2.df)
 
         ids = [game_id1,
                game_id2]
@@ -1117,13 +1160,12 @@ if __name__ == '__main__':
         print_sep()
 
         x3 = GetGamesFromWaitlist()
-        print_tit(f'{x3.waitlist_games_number} games in Wailist, showing 10:')
-        print_vert(x3.waitlist_games_title[0:10])
+        print_tit(f'{x3.waitlist_games_number} games in Wailist:')
+        print(x3.df)
 
         x4 = PutGamesIntoWaitlist(games_id=[game_id1, game_id2])
         print_tit(f'Added {len(x4.games_id)} games to waitlist:')
         print_vert(x4.games_id)
-
         x3.execute()
         print_tit(f'{x3.waitlist_games_number} games in Wailist')
 
@@ -1139,8 +1181,8 @@ if __name__ == '__main__':
 
         x6 = GetGamesFromCollection()
         print_tit(
-            f'{x6.collection_games_number} games in collection, showing 10:')
-        print_vert(x6.collection_games_title[0:10])
+            f'{x6.collection_games_number} games in collection:')
+        print(x6.df)
 
         x7 = PutGamesIntoCollection(games_id=[game_id1, game_id2])
         print_tit(f'Added {len(x7.games_id)} games to collection:')
@@ -1158,9 +1200,9 @@ if __name__ == '__main__':
     if debug_parts['copies']:
         print_sep()
 
-        # x9a = GetCopiesOfGames()
-        # print_tit('All game copies in collection:')
-        # print(x9a.df)
+        x9a = GetCopiesOfGames()
+        print_tit('All game copies in collection:')
+        print(x9a.df)
 
         x9b = GetCopiesOfGames(games_id_to_search=[game_id1, game_id2])
         print_tit('Copies found of Game IDs:')
@@ -1217,9 +1259,7 @@ if __name__ == '__main__':
         x14b = CreateNewCategory(category_title='New cat 2',
                                  category_public=False)
         print_tit('Added a new category 2:')
-        print(DataFrame({'ID': [x14b.created_category_id],
-                         'Title': [x14b.created_category_title],
-                         'Public': [x14b.created_category_public]}))
+        print(x14b.df)
 
         print_tit('All categories after additions:')
         x13.execute()
@@ -1238,7 +1278,7 @@ if __name__ == '__main__':
                          'Title': x15.categories_upd_title,
                          'Public': x15.categories_upd_public,
                          'Position': x15.categories_upd_position}))
-        print_tit('All categories afte update (response):')
+        print_tit('All categories afte update (from response):')
         print(x15.df)
 
         x16 = DeleteCategories([x14a.created_category_id,
@@ -1258,8 +1298,8 @@ if __name__ == '__main__':
         print(x17.username)
 
         x18 = GetUserNotes()
-        print_tit('Get user notes, showing 0-10:')
-        print(x18.df[0:10])
+        print_tit('Get user notes:')
+        print(x18.df)
 
         x19 = PutUserNotesToGame(games_id=[game_id1, game_id2],
                                  games_note=['bb', 'cc'])
@@ -1269,7 +1309,7 @@ if __name__ == '__main__':
                          'Note': x19.games_note}
                         ))
 
-        x20 = DeleteUserNotesFromGame([game_id1, game_id2])
+        x20 = DeleteUserNotesFromGame(games_id=[game_id1, game_id2])
         print_tit('Delete user notes from games:')
         print(DataFrame({'Game ID': x20.games_id,
                          'Game Title': BaseClass.get_games_title(x20.games_id)
