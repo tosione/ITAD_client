@@ -18,7 +18,12 @@ stored in the `private_data.py` module. User must generate its own
 `private_data.py` were this constants must be defined.
 
 For more information on the ITAD API, refer to the official
- [IsThereAnyDeal Documentation](https://docs.isthereanydeal.com/).
+ IsThereAnyDeal [Documentation](https://docs.isthereanydeal.com/) or [GITHub](https://github.com/IsThereAnyDeal/API).
+
+For mor information on OAuth2:
+- [Requests-OAuthlib: OAuth 2 Workflow](https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html)
+- [Proof Key of Code Exchange (PKCE)](https://docs.secureauth.com/ciam/en/proof-key-of-code-exchange--pkce-.html)
+- [OAuth 2.0 Explained With Simple Terms](https://bytebytego.com/guides/oauth-2-explained-with-siple-terms/)
 
 Author: [tosione](https://https://github.com/tosione)
 
